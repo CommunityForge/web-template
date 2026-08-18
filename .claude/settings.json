@@ -1,0 +1,71 @@
+{
+  "model": "opus[1m]",
+  "sandbox": {
+    "enabled": true,
+    "network": {
+      "allowUnixSockets": [
+        "/nix/var/nix/daemon-socket/socket",
+        "/var/run/nix-daemon.socket",
+        "/private/var/run/nix-daemon.socket"
+      ],
+      "allowedDomains": [
+        "cache.nixos.org",
+        "channels.nixos.org",
+        "flakehub.com",
+        "api.flakehub.com",
+        "cache.flakehub.com",
+        "github.com",
+        "api.github.com",
+        "codeload.github.com",
+        "objects.githubusercontent.com",
+        "raw.githubusercontent.com",
+        "registry.npmjs.org"
+      ]
+    },
+    "filesystem": {
+      "allowWrite": [
+        "~/.cache/nix",
+        "~/.local/state/nix",
+        "~/.local/share/nix",
+        "~/.cache/pnpm",
+        "~/.local/share/pnpm",
+        "~/Library/pnpm"
+      ]
+    }
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit|Task|Skill|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/boundary-guard.sh"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session-context.sh"
+          }
+        ]
+      }
+    ]
+  },
+  "enabledPlugins": {
+    "superpowers@claude-plugins-official": true
+  },
+  "extraKnownMarketplaces": {
+    "claude-plugins-official": {
+      "source": {
+        "source": "github",
+        "repo": "anthropics/claude-plugins-official"
+      }
+    }
+  },
+  "theme": "dark"
+}

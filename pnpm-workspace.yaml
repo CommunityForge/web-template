@@ -1,0 +1,43 @@
+packages:
+  - packages/*
+  - apps/*
+
+# Every dependency in every workspace unit resolves through a catalog or the
+# `workspace:` protocol -- never a literal version. This is the single rule that
+# keeps the dependency tree coherent as the repo grows.
+catalog:
+  "@types/node": ^25.9.5
+  "@vitest/coverage-v8": 4.1.10
+  typescript: 7.0.2
+  vitest: 4.1.10
+
+# Named catalog so the whole Effect line moves in lockstep.
+catalogs:
+  effect:
+    "@effect/atom-react": rc
+    "@effect/platform-browser": rc
+    "@effect/tsgo": 0.36.4
+    "@effect/vitest": rc
+    effect: rc
+
+engineStrict: true
+
+# 48h supply-chain cooldown on new releases, with an exemption for the
+# fast-moving Effect betas.
+#
+# NOTE: `buildPnpmPackage` re-resolves with `pnpm install --lockfile-only` inside
+# a fixed-output derivation. A time-gated resolver in an FOD is a reproducibility
+# hazard in principle; in practice the committed lockfile pins the versions, so
+# this only bites if the lockfile is stale. Drop it if that trade is unwelcome.
+minimumReleaseAge: 2880
+minimumReleaseAgeExclude:
+  - effect
+  - "@effect/*"
+
+resolvePeersFromWorkspaceRoot: false
+sharedWorkspaceLockfile: true
+strictPeerDependencies: true
+
+ignoredBuiltDependencies:
+  - sharp
+  - unrs-resolver

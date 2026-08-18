@@ -1,0 +1,21 @@
+# OpenSpec project config
+# `context` is injected into every artifact's instructions payload.
+#
+# There is deliberately no `rules:` block. Everything that was here now lives
+# in the per-artifact `instruction` fields of openspec/schemas/guided. Rules
+# and instructions arrive in the SAME `openspec instructions` payload, so a
+# rule that restates an instruction differently is a prompt arguing with
+# itself - which is exactly what happened when the discovery gate's "do not
+# re-ask" met a `rules.proposal` that said "run the coverage scan".
+#
+# One source of truth per artifact: the schema.
+
+schema: guided
+context: |-
+  OpenSpec owns the workflow in this project. Superpowers skills may be used
+  individually but never chained. A PreToolUse hook blocks writes to
+  docs/superpowers/ and blocks writing-plans, executing-plans and
+  subagent-driven-development. The apply phase is the only executor.
+
+  Never embed a "REQUIRED SUB-SKILL" line or any other executor directive in
+  an artifact. Artifacts describe the work, not who runs it.

@@ -1,0 +1,38 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# js
+node_modules/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+
+# debug
+npm-debug.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+
+# misc
+.DS_Store
+*.pem
+
+# nix
+.direnv/
+result
+result-*
+.devshell
+
+# agents
+## `.claude/` doubles as CLAUDE_CONFIG_DIR (see AGENTS.md "Agent configuration"), so it mixes
+## tracked project config with runtime state and credentials. Ignore everything, then
+## re-include only the config a clone needs -- deny-by-default, so a future Claude Code
+## release that adds a new state directory stays ignored without a change here.
+.claude/*
+!.claude/settings.json
+!.claude/hooks/
+!.claude/commands/
+!.claude/agents/
+!.claude/skills/
+.agents/skills/*-workspace/

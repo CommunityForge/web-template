@@ -1,0 +1,4 @@
+# The root .gitignore already covers node_modules, dist, coverage, *.tsbuildinfo, .env* and
+# .DS_Store. Only Vite-specific artefacts belong here.
+dist-ssr
+*.local

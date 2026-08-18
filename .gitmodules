@@ -1,0 +1,9 @@
+[submodule ".repos/effect-website"]
+	path = .repos/effect-website
+	url = https://github.com/Effect-TS/website
+	shallow = true
+
+[submodule ".repos/openspec-schemas"]
+	path = .repos/openspec-schemas
+	url = https://github.com/JiangWay/openspec-schemas
+	shallow = true

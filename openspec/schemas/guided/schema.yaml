@@ -1,0 +1,366 @@
+name: guided
+version: 1
+description: Spec-driven workflow with a product-language discovery gate - discovery → proposal → specs → design → tasks
+artifacts:
+  - id: discovery
+    generates: discovery.md
+    description: What the user was asked, what they answered, and what was assumed
+    template: discovery.md
+    instruction: |
+      This artifact exists to ask the user what they have not said. Asking IS
+      the work here - any guidance from the calling command to "prefer making
+      reasonable decisions to keep momentum" does not apply to this artifact.
+      Do not write proposal.md yet.
+
+      1. READ THE PROJECT'S OWN CONVENTIONS FIRST.
+         The root AGENTS.md and any nested per-unit AGENTS.md, openspec/specs/
+         for capabilities that already exist, and the lint, type and test
+         configuration. Anything these already determine is not a question -
+         it is an answer you look up.
+
+      2. COVERAGE SCAN. Internal reasoning, never shown to the user. Mark each
+         category Clear / Partial / Missing:
+           functional scope, domain model, persistence, interaction, data
+           operations, access, non-functional, integration, migration, failure
+           handling, success criteria
+
+      3. SCOPE CHECK. If the request spans multiple independent subsystems,
+         stop and propose splitting it into separate changes. Do not continue.
+         Do not spend questions refining a change that needs decomposition.
+
+      4. TRIAGE every Partial or Missing gap into exactly one bucket:
+
+         CONVENTION - the codebase already decides this: AGENTS.md, an
+           existing spec, the lint or type configuration, an established
+           pattern in neighboring code. Look the answer up and record it.
+           NEVER ask.
+         DESIGN - engineering judgment with no consequence a person using the
+           product would notice. Defer it to design.md. NEVER ask.
+         PRODUCT - the answer changes what a person can do, see, or rely on,
+           and only the user can give it.
+
+         In a codebase with strong conventions most gaps are CONVENTION or
+         DESIGN. A long PRODUCT list means you have incorrectly triaged -
+         re-check it against step 1 before asking anything.
+
+      5. Rank the PRODUCT gaps by (impact x uncertainty) and take the top 3-5.
+         Those are the only questions you ask.
+
+      6. PHRASING. Every question and every option describes something a
+         person using the product would notice. The scan category is your
+         reasoning, not your vocabulary. Translate before you speak:
+
+           persistence      -> what should still be there tomorrow, or on
+                               their phone
+           domain model     -> what things someone names and sees; what they
+                               can have many of
+           interaction      -> the first time they open it with nothing in it;
+                               what they see while waiting, or when it breaks
+           data operations  -> can they change their mind, undo, find one
+                               among hundreds
+           access           -> who else can see or do this
+           non-functional   -> how many, how slow before it feels broken, does
+                               it work offline, keyboard and screen reader
+           integration      -> what else in the product visibly changes as a
+                               result
+           migration        -> what happens to the people and data already here
+           failure          -> what the person sees and can do when it goes
+                               wrong
+           success criteria -> what you would look at in a week to know it
+                               worked
+
+         Never use in a question or an option: schema, migration, persistence,
+         persist, endpoint, API, non-functional, idempotent, race condition,
+         index, cache, transaction, state management, coupling, refactor,
+         latency, throughput, backend, frontend.
+
+         Each option states an outcome and what it costs, not a mechanism.
+         Write "still there next week on any device (needs an account)",
+         not "persist to server-side storage".
+
+         TEST each question before sending it: would a colleague who has never
+         seen this codebase answer it without asking what a word means? If no,
+         rewrite it once. If it still fails, it was never a PRODUCT gap - move
+         it to DESIGN and drop it.
+
+      7. ASK. One question per message, never batched. If an interactive
+         question tool is available, use it: one question per call, at most 4
+         options, each label 5 words or fewer, and always allow an open-ended
+         answer. Mark one option Recommended with a one-line reason. Stop
+         early if the user says "done", "good", or "no more". Never show the
+         user the coverage scan, the triage, or the question queue.
+
+      8. WRITE discovery.md:
+         - the coverage table, with each row's triage bucket
+         - what you resolved by convention, and the file each answer came from
+         - each question as you asked it, with the user's answer verbatim
+         - what you deferred to design.md
+         - Assumptions: anything unanswered you are proceeding on anyway, each
+           marked ASSUMED
+
+         The Assumptions list is the user's review gate - it is where you
+         decided on their behalf. Keep it in the same plain language as the
+         questions.
+    requires: []
+
+  - id: proposal
+    generates: proposal.md
+    description: Why this change is worth making, and which capabilities it touches
+    template: proposal.md
+    instruction: |
+      Create the proposal document that establishes WHY this change is needed.
+
+      discovery.md already exists and holds the user's answers. Do not re-ask
+      those questions and do not run another coverage scan.
+
+      Sections:
+      - **Why**: 1-2 sentences on the problem or opportunity, stated as what a
+        person using the product cannot do today, or does badly. What problem
+        does this solve? Why now?
+      - **What Changes**: Bullet list of changes. Be specific about new
+        capabilities, modifications, or removals. Mark breaking changes with
+        **BREAKING**.
+      - **Capabilities**: Identify which specs will be created or modified:
+        - **New Capabilities**: List capabilities being introduced. Each
+          becomes a new `specs/<name>/spec.md`. Use kebab-case names (e.g.,
+          `user-auth`, `data-export`).
+        - **Modified Capabilities**: List existing capabilities whose
+          REQUIREMENTS are changing. Only include if spec-level behavior
+          changes (not just implementation details). Each needs a delta spec
+          file. Check `openspec/specs/` for existing spec names. Leave empty
+          if no requirement changes.
+      - **Impact**: Affected code, APIs, dependencies, or systems.
+
+      IMPORTANT: The Capabilities section is critical. It creates the contract
+      between proposal and specs phases. Research existing specs before
+      filling this in. Each capability listed here will need a corresponding
+      spec file.
+
+      Every change must either declare at least one capability (new or
+      modified) or explicitly opt out of specs: `openspec validate` rejects a
+      change with zero deltas unless the change's `.openspec.yaml` sets
+      `skip_specs: true`. Use `skip_specs: true` only when no spec-level
+      behavior changes (pure refactor, tooling, docs) - specs describe
+      behavior, so if behavior does not change, no spec should change either.
+      Do not invent a requirement just to satisfy validation.
+
+      CARRY DISCOVERY FORWARD. Every answer in discovery.md appears here as
+      either a stated goal or an explicit non-goal. Carry ASSUMED items
+      forward as stated assumptions so a reviewer can challenge them. Items
+      discovery deferred to design belong in design.md, not here.
+
+      Keep it concise (1-2 pages). Focus on the "why" not the "how" -
+      implementation details belong in design.md.
+
+      Do not embed executor directives (for example a "REQUIRED SUB-SKILL"
+      line) in any artifact. Artifacts describe the work, not who runs it.
+
+      This is the foundation - specs, design, and tasks all build on this.
+    requires:
+      - discovery
+
+  - id: specs
+    generates: specs/**/*.md
+    description: What the system must do, as scenarios anyone can check
+    template: spec.md
+    instruction: |
+      Create specification files that define WHAT the system should do.
+
+      A spec is a behavior contract, not an implementation plan.
+
+      Good spec content:
+      - Observable behavior users or downstream systems rely on
+      - Inputs, outputs, and error conditions
+      - External constraints (security, privacy, reliability, compatibility)
+      - Scenarios that can be tested or explicitly validated
+
+      Avoid in specs:
+      - Internal class/function names
+      - Library or framework choices
+      - Step-by-step implementation details
+      - Detailed execution plans (those belong in design.md or tasks.md)
+
+      Quick test: if the implementation can change without changing externally
+      visible behavior, it likely does not belong in the spec.
+
+      WRITE SCENARIOS SOMEONE ELSE CAN CHECK. This is the artifact the user
+      reviews to confirm the change does what they asked, so each scenario
+      states an outcome they could observe and disagree with. Never "works
+      correctly", "handles errors gracefully", "is performant" - state what
+      actually happens. Prefer the user-visible effect over the mechanism that
+      produces it.
+
+      CROSS-CHECK against discovery.md. Every answer the user gave must appear
+      here as a requirement or an explicit non-goal. If one does not, add it.
+
+      Create one spec file per capability listed in the proposal's Capabilities section.
+      - New capabilities: use the exact kebab-case name from the proposal (specs/<capability>/spec.md).
+      - Modified capabilities: use the existing spec folder name from openspec/specs/<capability>/ when creating the delta spec at specs/<capability>/spec.md.
+
+      There must be at least one spec file unless the change's `.openspec.yaml`
+      sets `skip_specs: true` (no spec-level behavior change) - `openspec validate`
+      rejects a zero-delta change without that marker. If the proposal lists no
+      capabilities and `skip_specs` is not set, revisit the proposal first.
+
+      Delta operations (use ## headers):
+      - **ADDED Requirements**: New capabilities
+      - **MODIFIED Requirements**: Changed behavior - MUST include full updated content
+      - **REMOVED Requirements**: Deprecated features - MUST include **Reason** and **Migration**
+      - **RENAMED Requirements**: Name changes only - use FROM:/TO: format
+
+      Format requirements:
+      - Each requirement: `### Requirement: <name>` followed by description
+      - Use SHALL/MUST for normative requirements (avoid should/may)
+      - Each scenario: `#### Scenario: <name>` with WHEN/THEN format
+      - **CRITICAL**: Scenarios MUST use exactly 4 hashtags (`####`). Using 3 hashtags or bullets will fail silently.
+      - Every requirement MUST have at least one scenario.
+
+      New capabilities only: start the delta spec with a `## Purpose` section -
+      one or two sentences (50+ characters, or `openspec validate --strict`
+      reports it as too brief) describing what the capability is for. Archive
+      copies it into the main spec it creates; without it the new main spec is
+      left with a `TBD ... Update Purpose after archive` placeholder to fill in
+      by hand. Do NOT add `## Purpose` to a delta for an existing capability -
+      that spec already has one and the delta's is ignored. To change an
+      existing capability's Purpose - including a leftover `TBD` placeholder -
+      edit `openspec/specs/<capability>/spec.md` directly.
+
+      MODIFIED requirements workflow:
+      1. Locate the existing requirement in openspec/specs/<capability>/spec.md
+      2. Copy the ENTIRE requirement block (from `### Requirement:` through all scenarios)
+      3. Paste under `## MODIFIED Requirements` and edit to reflect new behavior
+      4. Ensure header text matches exactly (whitespace-insensitive)
+
+      Common pitfall: Using MODIFIED with partial content loses detail at archive time.
+      If adding new concerns without changing existing behavior, use ADDED instead.
+
+      Example (a new capability, so it opens with `## Purpose`):
+      ```
+      ## Purpose
+
+      Lets users take their data out of the product in a portable format.
+
+      ## ADDED Requirements
+
+      ### Requirement: User can export data
+      The system SHALL allow users to export their data in CSV format.
+
+      #### Scenario: Successful export
+      - **WHEN** user clicks "Export" button
+      - **THEN** system downloads a CSV file with all user data
+
+      ## REMOVED Requirements
+
+      ### Requirement: Legacy export
+      **Reason**: Replaced by new export system
+      **Migration**: Use new export endpoint at /api/v2/export
+      ```
+
+      Specs should be testable - each scenario is a potential test case.
+    requires:
+      - proposal
+
+  - id: design
+    generates: design.md
+    description: How it will be built - engineering-facing, not a user review artifact
+    template: design.md
+    instruction: |
+      Create the design document that explains HOW to implement the change.
+
+      This artifact is for whoever implements the change. It is the one place
+      engineering vocabulary belongs, and the user is not expected to review
+      it. Everything discovery.md triaged as DESIGN is resolved here, by you -
+      do not take those back to the user.
+
+      When to include design.md (create only if any apply):
+      - Cross-cutting change (multiple services/modules) or new architectural pattern
+      - New external dependency or significant data model changes
+      - Security, performance, or migration complexity
+      - Ambiguity that benefits from technical decisions before coding
+
+      Sections:
+      - **Context**: Only the current state and constraints needed to explain the approach. Reference the proposal for motivation instead of restating it (e.g., "See proposal.md - Why").
+      - **Goals / Non-Goals**: What this design achieves and explicitly excludes. Don't restate the proposal's scope - add only design-level boundaries.
+      - **Decisions**: Key technical choices with rationale (why X over Y?). Present 2-3 approaches with trade-offs before recommending one, and say in one line why each rejected option was rejected.
+      - **Risks / Trade-offs**: Known limitations, things that could go wrong. Format: [Risk] → Mitigation. Call out anything that could break existing behavior.
+      - **Migration Plan**: Steps to deploy, rollback strategy (if applicable)
+      - **Open Questions**: Unknowns that can safely be answered later without
+        changing the specs, the approach, or the task breakdown. Omit if none.
+
+      List every existing file or module this change touches, and say whether
+      it is read, modified, or replaced. Follow the conventions discovery.md
+      recorded rather than re-deciding them.
+
+      Open questions are for genuinely deferrable unknowns, not decisions you
+      skipped. If a question would change the specs, the chosen approach, or
+      the task breakdown, resolve it now. If resolving it needs the user, ask
+      in the plain product language discovery.md used - never in the
+      vocabulary of this document.
+
+      Focus on architecture and approach, not line-by-line implementation.
+      The proposal covers why and what; design covers how. Reference the
+      proposal for motivation and, once written, the specs for requirements -
+      if a section would only restate them, point to them instead.
+
+      Good design docs explain the "why" behind technical decisions.
+    requires:
+      - proposal
+
+  - id: tasks
+    generates: tasks.md
+    description: Implementation checklist - engineering-facing, not a user review artifact
+    template: tasks.md
+    instruction: |
+      Create the task list that breaks down the implementation work.
+
+      Like design.md, this is for whoever implements the change. The user is
+      not expected to review it.
+
+      Before writing tasks, check design.md for Open Questions. If any of them
+      would change what gets built, resolve them with the user first - do not
+      bake an unstated assumption into the task list.
+
+      **IMPORTANT: Follow the template below exactly.** The apply phase parses
+      checkbox format to track progress. Tasks not using `- [ ]` won't be tracked.
+
+      Guidelines:
+      - Group related tasks under ## numbered headings
+      - Each task MUST be a checkbox: `- [ ] X.Y Task description`
+      - Tasks should be small enough to complete in one session
+      - Order tasks by dependency (what must be done first?)
+      - Each task is independently testable and produces a visible result.
+        Fold setup, config, and scaffolding into the task that needs them.
+
+      Example:
+      ```
+      ## 1. Setup
+
+      - [ ] 1.1 Create new module structure
+      - [ ] 1.2 Add dependencies to package.json
+
+      ## 2. Core Implementation
+
+      - [ ] 2.1 Implement data export function
+      - [ ] 2.2 Add CSV formatting utilities
+      ```
+
+      Do NOT embed instructions about which skill or sub-agent should execute
+      these tasks. The apply phase executes them. Artifacts describe the work,
+      not who runs it.
+
+      Before finishing: re-read the spec scenarios. If any scenario has no
+      task that would satisfy it, add the missing task.
+
+      Reference specs for what needs to be built, design for how to build it.
+      Each task should be verifiable - you know when it's done.
+    requires:
+      - specs
+      - design
+
+apply:
+  requires:
+    - tasks
+  tracks: tasks.md
+  instruction: |
+    Read context files, work through pending tasks, mark complete as you go.
+    Pause if you hit blockers or need clarification.

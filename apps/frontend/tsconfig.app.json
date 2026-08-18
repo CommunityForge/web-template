@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // A bundler-built frontend is a *leaf*, not a project reference -- see the note in
+    // `tsconfig.apps.json`. Vite does the resolving and emitting; `tsc -b` only type-checks,
+    // so the base config's emit-oriented options are switched off here.
+    "composite": false,
+    "noEmit": true,
+    "declaration": false,
+    // `declarationMap` without `declaration` is an error, so the base's `true` must be undone.
+    "declarationMap": false,
+    "sourceMap": false,
+    "tsBuildInfoFile": "${configDir}/node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    // The base pins `rootDir` to `src`, but nothing is emitted here and `test/` sits outside it.
+    "rootDir": "${configDir}",
+    // `moduleResolution: "bundler"` requires an ES module target; the base's `NodeNext` is for
+    // units that `tsc` actually emits.
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "allowArbitraryExtensions": true,
+    "jsx": "react-jsx",
+    // The base targets Node: `types: []` and no `lib`. A browser app opts both back in.
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["vite/client"],
+    // Mirrored by `resolve.alias` in `vite.config.ts` -- tsc and the bundler resolve separately.
+    "paths": {
+      "@/*": ["${configDir}/src/*"]
+    }
+  },
+  "include": ["src", "test"]
+}

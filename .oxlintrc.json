@@ -1,0 +1,106 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oxc-project/oxc/main/npm/oxlint/configuration_schema.json",
+  "plugins": ["eslint", "import", "jsx-a11y", "node", "oxc", "react", "react-perf", "typescript", "unicorn"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "error"
+  },
+  "ignorePatterns": [
+    "**/dist",
+    "**/build",
+    "**/coverage",
+    "**/*.tsbuildinfo",
+    "**/node_modules",
+    ".direnv/**",
+    ".repos/**",
+    "result"
+  ],
+  "rules": {
+    "typescript/consistent-type-imports": [
+      "error",
+      {
+        "fixStyle": "inline-type-imports"
+      }
+    ],
+    "typescript/no-import-type-side-effects": "error",
+    "typescript/no-unnecessary-type-assertion": "error",
+    "typescript/no-unnecessary-type-constraint": "error",
+    "typescript/no-useless-empty-export": "error",
+    "typescript/array-type": [
+      "error",
+      {
+        "default": "generic"
+      }
+    ],
+    "import/no-duplicates": "error",
+    "import/no-self-import": "error",
+    "import/no-empty-named-blocks": "error",
+    "eslint/no-console": "error",
+    "eslint/no-var": "error",
+    "eslint/no-useless-constructor": "error",
+    "eslint/no-unneeded-ternary": "error",
+    "eslint/no-useless-concat": "error",
+    "oxc/misrefactored-assign-op": "error",
+    "unicorn/no-abusive-eslint-disable": "error",
+    "unicorn/prefer-array-flat-map": "error",
+    "unicorn/no-accessor-recursion": "error",
+    // Effect idioms that the default rule set fights.
+    "typescript/no-namespace": "off",
+    "typescript/no-explicit-any": "off",
+    "eslint/require-yield": "off",
+    "eslint/no-fallthrough": "off",
+    "eslint/no-await-in-loop": "off"
+  },
+  "overrides": [
+    {
+      "files": ["apps/frontend/**"],
+      "rules": {
+        "react/rules-of-hooks": "error",
+        "react/only-export-components": [
+          "warn",
+          {
+            "allowConstantExport": true
+          }
+        ],
+        "import/no-unassigned-import": "off",
+        "react/react-in-jsx-scope": "off",
+        "react-hooks/rules-of-hooks": "error",
+        "react-hooks/exhaustive-deps": "error"
+      }
+    },
+    {
+      // Managed by shadcn
+      "files": ["apps/frontend/src/components/ui/**"],
+      "rules": {
+        "typescript/no-unsafe-type-assertion": "off",
+        "typescript/no-unnecessary-type-assertion": "off",
+        "typescript/restrict-template-expressions": "off",
+        "typescript/consistent-return": "off",
+        "jsx-a11y/prefer-tag-over-role": "off",
+        "jsx-a11y/anchor-has-content": "off",
+        "react/only-export-components": "off",
+        "react-perf/jsx-no-jsx-as-prop": "off",
+        "react/no-object-type-as-default-prop": "off",
+        "react/no-array-index-key": "off",
+        "react-perf/jsx-no-new-object-as-prop": "off",
+        "react/no-unstable-nested-components": "off",
+        "react-perf/jsx-no-new-function-as-prop": "off",
+        "react/jsx-no-constructed-context-values": "off",
+        "typescript/no-import-type-side-effects": "off",
+        "typescript/array-type": "off",
+        "eslint/no-underscore-dangle": "off",
+        "jsx-a11y/no-noninteractive-element-interactions": "off",
+        "jsx-a11y/click-events-have-key-events": "off",
+        "jsx-a11y/label-has-associated-control": "off",
+        "eslint/no-shadow": "off"
+      }
+    },
+    {
+      "files": ["**/test/**", "**/scripts/**"],
+      "rules": {
+        "eslint/no-console": "off"
+      }
+    }
+  ]
+}

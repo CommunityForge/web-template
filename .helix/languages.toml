@@ -1,0 +1,39 @@
+[language-server.tailwindcss]
+command = "tailwindcss-language-server"
+args = ["--stdio"]
+
+[language-server.oxlint]
+command = "oxlint"
+args = ["--lsp"]
+
+[language-server.tsgo]
+command = "tsc"
+args = ["--lsp", "--stdio"]
+
+[[language]]
+name = "typescript"
+auto-format = true
+formatter = { command = "oxfmt", args = ["--stdin-filepath", "file.ts"] }
+language-servers = [
+  { name = "tsgo", except-features = [ "format", ] },
+  { name = "oxlint", except-features = [ "format", ] },
+]
+
+[[language]]
+name = "tsx"
+scope = "source.tsx"
+file-types = ["tsx"]
+auto-format = true
+formatter = { command = "oxfmt", args = ["--stdin-filepath", "file.tsx"] }
+language-servers = [
+  { name = "tsgo", except-features = [ "format", ] },
+  { name = "tailwindcss", except-features = [ "format", ] },
+  { name = "oxlint", except-features = [ "format", ] },
+]
+
+[[language]]
+name = "nix"
+auto-format = true
+formatter = { command = "treefmt", args = ["--stdin", "stdin.nix"] }
+
+

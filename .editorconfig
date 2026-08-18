@@ -1,0 +1,21 @@
+# Editors read this before any formatter runs; the values mirror .oxfmtrc.json so the two
+# never disagree. `nix fmt` remains the authority.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+indent_size = 2
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.md]
+# Trailing double-space is a hard line break in Markdown.
+trim_trailing_whitespace = false
+
+[{Makefile,*.mk}]
+indent_style = tab
+
+[.gitmodules]
+indent_style = tab

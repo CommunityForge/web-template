@@ -1,0 +1,29 @@
+{
+  "name": "@replaceme/monorepo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "clean": "node scripts/clean.mjs",
+    "build": "tsc -b tsconfig.packages.json tsconfig.apps.json && pnpm --recursive --parallel run build",
+    "check": "tsc -b tsconfig.json",
+    "check-recursive": "pnpm --recursive exec tsc -b tsconfig.json",
+    "lint": "oxlint --type-aware --disable-nested-config",
+    "lint:fix": "oxlint --type-aware --fix --disable-nested-config",
+    "test": "vitest",
+    "coverage": "vitest --coverage",
+    "prepare": "effect-tsgo patch"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.29.7",
+    "@babel/core": "^7.29.7",
+    "@effect/tsgo": "catalog:effect",
+    "@effect/vitest": "catalog:effect",
+    "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "babel-plugin-annotate-pure-calls": "^0.5.0",
+    "effect": "catalog:effect",
+    "glob": "^13.0.6",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

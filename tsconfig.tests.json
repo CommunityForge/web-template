@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "./tsconfig.base.json",
+  "references": [{ "path": "tsconfig.packages.json" }, { "path": "tsconfig.apps.json" }],
+  "include": [
+    "**/vitest.*.ts", // All vitest config files across all workspace units
+    "./packages/*/test/**/*.ts",
+    "./packages/*/test/**/*.json",
+    "./apps/*/test/**/*.ts",
+    "./apps/*/test/**/*.json"
+  ],
+  "exclude": ["**/node_modules/**", "**/dist/**"],
+  "compilerOptions": {
+    "rootDir": ".",
+    "noEmit": true,
+    "erasableSyntaxOnly": false,
+    "resolveJsonModule": true,
+    "types": ["node"],
+    "paths": {
+      // These aliases make tests type-check against *source* rather than emitted `dist/*.d.ts`,
+      // and are the escape hatch for reaching `internal/*` (which package `exports` null out).
+      // They are also how you break a cyclic workspace dependency in a test suite.
+      "@replaceme/core": ["./packages/core/src/index.ts"],
+      "@replaceme/core/*": ["./packages/core/src/*.ts"]
+    }
+  }
+}

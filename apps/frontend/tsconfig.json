@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  // Inert for `tsc -b` -- this project compiles nothing (`files` is empty; the real work happens
+  // in the referenced configs). It exists for the shadcn CLI, which resolves the `components.json`
+  // aliases with `tsconfig-paths`. That resolver reads *this* file, does not follow `references`,
+  // and does not understand `${configDir}`, so without a literal `baseUrl` + `paths` here it
+  // cannot see the `@/*` mapping and writes components to a directory literally named `@`.
+  // Keep in sync with `paths` in `tsconfig.app.json` and `resolve.alias` in `vite.config.ts`.
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "files": [],
+  "references": [{ "path": "./tsconfig.app.json" }, { "path": "./tsconfig.node.json" }]
+}

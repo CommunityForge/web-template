@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // Same leaf treatment as `tsconfig.app.json`: Vite loads this file itself, `tsc -b` only
+    // type-checks it. The base's `module: "NodeNext"` is already right for a config file.
+    "composite": false,
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "tsBuildInfoFile": "${configDir}/node_modules/.tmp/tsconfig.node.tsbuildinfo",
+    "rootDir": "${configDir}",
+    "types": ["node"]
+  },
+  // `vitest.config.ts` is deliberately absent: the root `tsconfig.tests.json` already globs
+  // `**/vitest.*.ts` repo-wide, and a file may not belong to two projects.
+  "include": ["vite.config.ts"]
+}
