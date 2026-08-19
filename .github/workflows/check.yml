@@ -1,0 +1,46 @@
+name: Check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    outputs:
+      checks: ${{ steps.list.outputs.checks }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+        if: ${{ !env.ACT }}
+      - id: list
+        run: |
+          checks=$(nix eval --json .#checks.x86_64-linux --apply builtins.attrNames)
+          if [ "$checks" = "[]" ]; then
+            echo "::error::no checks found in flake" && exit 1
+          fi
+          echo "checks=$checks" >> "$GITHUB_OUTPUT"
+
+  check:
+    needs: discover
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        check: ${{ fromJSON(needs.discover.outputs.checks) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+        if: ${{ !env.ACT }}
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+        if: ${{ !env.ACT }}
+      - run: nix build .#checks.x86_64-linux.${{ matrix.check }} -L --no-link
