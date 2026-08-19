@@ -1,13 +1,13 @@
 import * as Atom from "effect/unstable/reactivity/Atom"
 
-import { layerLocalStorage } from "@/lib/browser-storage"
+import * as BrowserStorage from "@/lib/browser-storage"
 
-import { type Appearance, Theme } from "./theme.ts"
+import * as Theme from "./theme.ts"
 
 /**
  * This feature's runtime, providing the `KeyValueStore` that `Atom.kvs` writes the preference to.
  */
-const runtime = Atom.runtime(layerLocalStorage)
+const runtime = Atom.runtime(BrowserStorage.layerLocalStorage)
 
 /**
  * The user's preference, durable across a reload on this device.
@@ -19,8 +19,8 @@ const runtime = Atom.runtime(layerLocalStorage)
 export const themeAtom = Atom.kvs({
   runtime,
   key: "vite-ui-theme",
-  schema: Theme,
-  defaultValue: (): Theme => "dark",
+  schema: Theme.Theme,
+  defaultValue: (): Theme.Theme => "dark",
 }).pipe(Atom.withLabel("theme:preference"))
 
 /**
@@ -28,9 +28,9 @@ export const themeAtom = Atom.kvs({
  * per component, torn down with the atom's last subscriber. Reading it live also means a preference of `"system"` now
  * follows the OS while the tab is open, which the one-shot `matchMedia` read it replaces did not.
  */
-const systemAppearanceAtom = Atom.make<Appearance>((get) => {
+const systemAppearanceAtom = Atom.make<Theme.Appearance>((get) => {
   const query = window.matchMedia("(prefers-color-scheme: dark)")
-  const appearance = (): Appearance => (query.matches ? "dark" : "light")
+  const appearance = (): Theme.Appearance => (query.matches ? "dark" : "light")
   const update = () => get.setSelf(appearance())
 
   query.addEventListener("change", update)
@@ -44,7 +44,7 @@ const systemAppearanceAtom = Atom.make<Appearance>((get) => {
  * is registered by reading it, so it is subscribed only while the preference is `"system"` -- no listener runs for a
  * user who picked a side.
  */
-export const appearanceAtom = Atom.make<Appearance>((get) => {
+export const appearanceAtom = Atom.make<Theme.Appearance>((get) => {
   const theme = get(themeAtom)
   return theme === "system" ? get(systemAppearanceAtom) : theme
 }).pipe(Atom.withLabel("theme:appearance"))

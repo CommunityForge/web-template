@@ -28,7 +28,17 @@
     "plugins": [
       {
         "name": "@effect/language-service",
-        "namespaceImportPackages": ["effect", "@effect/*", "@replaceme/*"],
+        "namespaceImportPackages": [
+          "effect",
+          "@effect/*",
+          "@replaceme/*",
+          "react",
+          "react-dom/*",
+          "react-router",
+          "lucide-react",
+          "clsx",
+          "tailwind-merge"
+        ],
         "includeSuggestionsInTsc": true,
         "ignoreEffectWarningsInTscExitCode": false,
         "ignoreEffectErrorsInTscExitCode": false

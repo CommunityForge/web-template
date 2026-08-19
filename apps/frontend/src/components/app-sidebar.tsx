@@ -1,20 +1,11 @@
 import * as Array from "effect/Array"
 import { pipe } from "effect/Function"
 import * as Predicate from "effect/Predicate"
-import { HomeIcon, ListTodoIcon } from "lucide-react"
-import { Link, useMatch, useResolvedPath } from "react-router"
+import * as Lucide from "lucide-react"
+import * as React from "react"
+import * as ReactRouter from "react-router"
 
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from "@/components/ui/sidebar"
+import * as Sidebar from "@/components/ui/sidebar"
 
 interface NavItemProps {
   to: string
@@ -26,26 +17,26 @@ interface NavItemProps {
 
 const NAV_ITEMS: Array.NonEmptyReadonlyArray<NavItemProps> = pipe(
   [
-    { to: "/", label: "Home", end: true, icon: <HomeIcon /> },
-    { to: "/tasks", label: "Tasks", end: false, icon: <ListTodoIcon /> },
+    { to: "/", label: "Home", end: true, icon: <Lucide.HomeIcon /> },
+    { to: "/tasks", label: "Tasks", end: false, icon: <Lucide.ListTodoIcon /> },
   ] as const,
-  Array.map((item) => ({ ...item, link: <Link to={item.to} /> })),
+  Array.map((item) => ({ ...item, link: <ReactRouter.Link to={item.to} /> })),
 )
 
 function NavItem(props: NavItemProps) {
-  const resolved = useResolvedPath(props.to)
-  const match = useMatch({ path: resolved.pathname, end: props.end })
+  const resolved = ReactRouter.useResolvedPath(props.to)
+  const match = ReactRouter.useMatch({ path: resolved.pathname, end: props.end })
 
   return (
-    <SidebarMenuItem>
-      <SidebarMenuButton
+    <Sidebar.SidebarMenuItem>
+      <Sidebar.SidebarMenuButton
         isActive={Predicate.isNotNull(match)}
         render={props.link}
       >
         {props.icon ?? null}
         {props.label}
-      </SidebarMenuButton>
-    </SidebarMenuItem>
+      </Sidebar.SidebarMenuButton>
+    </Sidebar.SidebarMenuItem>
   )
 }
 
@@ -61,19 +52,19 @@ export function AppSidebar() {
     />
   ))
   return (
-    <Sidebar
+    <Sidebar.Sidebar
       variant="sidebar"
       collapsible="icon"
     >
-      <SidebarHeader />
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>{navItems}</SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-      <SidebarFooter />
-    </Sidebar>
+      <Sidebar.SidebarHeader />
+      <Sidebar.SidebarContent>
+        <Sidebar.SidebarGroup>
+          <Sidebar.SidebarGroupContent>
+            <Sidebar.SidebarMenu>{navItems}</Sidebar.SidebarMenu>
+          </Sidebar.SidebarGroupContent>
+        </Sidebar.SidebarGroup>
+      </Sidebar.SidebarContent>
+      <Sidebar.SidebarFooter />
+    </Sidebar.Sidebar>
   )
 }

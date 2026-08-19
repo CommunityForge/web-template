@@ -1,8 +1,8 @@
 import { describe, expect, it } from "@effect/vitest"
 import { render, within } from "@testing-library/react"
-import { MemoryRouter } from "react-router"
+import * as ReactRouter from "react-router"
 
-import App from "../src/App.tsx"
+import * as App from "../src/App.tsx"
 
 // This is the only test in the file that renders the real, `localStorage`-backed `tasksAtom`
 // (via `App` -> `Tasks`), so there is nothing else in this file for it to race (see
@@ -30,9 +30,9 @@ const TASKS_PATH = ["/tasks"]
 describe("Tasks route", () => {
   it("renders the task list page at /tasks", () => {
     const { container } = render(
-      <MemoryRouter initialEntries={TASKS_PATH}>
-        <App />
-      </MemoryRouter>,
+      <ReactRouter.MemoryRouter initialEntries={TASKS_PATH}>
+        <App.App />
+      </ReactRouter.MemoryRouter>,
     )
 
     expect(within(container).getByRole("textbox", { name: "Add a task" })).toBeDefined()

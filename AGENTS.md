@@ -96,6 +96,46 @@ bundler-built leaf, not a composite project. See `apps/frontend/AGENTS.md`.
 - **British spellings fail `nix flake check`.** `typos` runs with `default.locale = "en-us"` over
   everything except `.repos/`, `pnpm-lock.yaml` and `flake.lock`.
 
+## Import style
+
+**Every import binds a namespace: `import * as Name from "specifier"`.** `Name` is PascalCase
+derived from the module, not from what it exports — `@/components/ui/dropdown-menu` is
+`DropdownMenu`, `@/lib/browser-storage` is `BrowserStorage`, `../task.ts` is `Tasks`. Member access
+carries the prefix even when that reads redundantly: `Button.Button`, `Input.Input`, `App.App`. The
+prefix is the point — it says where a name came from without a jump to the import block, and it is
+what keeps a module free to add exports without colliding with its consumers' locals.
+
+The rule has a consequence worth stating outright: **do not `export default`.** A default import
+cannot be namespace-qualified, so a default export puts the module permanently outside the
+convention. `apps/frontend/src/App.tsx` is exported by name for exactly this reason.
+
+Unqualified is correct in four cases, and only these:
+
+1. **Test DSL** — `@effect/vitest` (`describe`/`it`/`expect`), `@effect/vitest/utils`
+   (`strictEqual`), `@testing-library/react` (`render`/`fireEvent`/`waitFor`/`within`), and
+   `vitest/config` (`defineConfig`/`mergeConfig`). These read as syntax at a call site that is
+   nothing but call sites; a prefix on every assertion line buys nothing.
+2. **`effect/Function`** — `pipe`, `identity`, `flow`. Same reasoning.
+3. **Third-party modules that only offer a default export** — `@tailwindcss/vite`,
+   `@vitejs/plugin-react`. A namespace object is not callable, so this is a language limit rather
+   than a preference. It does not license a _new_ default export in this repo; see above.
+4. **Bare side-effect imports** — `import "@/index.css"`.
+
+A namespace whose members are all used in type position needs `import type * as Name` —
+`typescript/consistent-type-imports` is an error and does not care that the import is a namespace.
+`ModeToggle.tsx` and `test/task-list.test.tsx` are the two live examples.
+
+`vite.config.ts`, `vitest.config.ts`, `vitest.shared.ts` and `vitest.setup.ts` are covered entirely
+by cases 1 and 3, so they need nothing.
+
+**`apps/frontend/src/components/ui/**` is exempt.** Those files are vendored shadcn output that the
+CLI overwrites on every `add`/`update` — `.oxlintrc.json` already carves them out under a
+`// Managed by shadcn` override for the same reason. Leave their internals in upstream form;
+everything importing _from_ them still does so qualified.
+
+`tsconfig.base.json`'s `namespaceImportPackages` steers the language service's auto-imports toward
+this form. It matches package names only, so the `@/*` alias and relative specifiers are on you.
+
 ## Tests
 
 Every unit merges `vitest.shared.ts`, so these hold everywhere:

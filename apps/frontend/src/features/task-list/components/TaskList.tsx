@@ -1,15 +1,15 @@
 import * as React from "react"
 
-import * as Tasks from "../task.ts"
-import { AddTaskForm } from "./AddTaskForm.tsx"
-import { TaskRow } from "./TaskRow.tsx"
+import * as Task from "../task.ts"
+import * as AddTaskForm from "./AddTaskForm.tsx"
+import * as TaskRow from "./TaskRow.tsx"
 
 export function TaskList({
   tasks,
   setTasks,
 }: {
-  readonly tasks: ReadonlyArray<Tasks.Task>
-  readonly setTasks: Tasks.SetTasks
+  readonly tasks: ReadonlyArray<Task.Task>
+  readonly setTasks: Task.SetTasks
 }) {
   // Both are view-local UI state, not list data: the announcement is a transient message and
   // the dragged id only matters mid-gesture, so neither belongs in the durable atom.
@@ -40,11 +40,11 @@ export function TaskList({
         let next = current
         if (sourceIndex > targetIndex) {
           for (let i = sourceIndex; i > targetIndex; i--) {
-            next = Tasks.moveTask(sourceId, "up")(next)
+            next = Task.moveTask(sourceId, "up")(next)
           }
         } else {
           for (let i = sourceIndex; i < targetIndex; i++) {
-            next = Tasks.moveTask(sourceId, "down")(next)
+            next = Task.moveTask(sourceId, "down")(next)
           }
         }
         return next
@@ -55,7 +55,7 @@ export function TaskList({
 
   return (
     <div>
-      <AddTaskForm setTasks={setTasks} />
+      <AddTaskForm.AddTaskForm setTasks={setTasks} />
 
       <div
         aria-live="polite"
@@ -69,7 +69,7 @@ export function TaskList({
       ) : (
         <ul>
           {tasks.map((task, index) => (
-            <TaskRow
+            <TaskRow.TaskRow
               key={task.id}
               task={task}
               position={index}
