@@ -8,34 +8,6 @@ import * as TaskList from "../src/features/task-list"
 
 const STORAGE_KEY = "task-list:tasks"
 
-// Node >= 22 defines its own global `localStorage` (undefined unless `--localstorage-file` is
-// passed), and happy-dom's registrator does not overwrite an existing global -- so the DOM
-// implementation `atoms.ts`'s `window.localStorage` expects never lands in this environment.
-// An in-memory stand-in restores the contract the atom relies on; real browsers are unaffected.
-const makeMemoryStorage = (): Storage => {
-  const store = new Map<string, string>()
-  return {
-    get length() {
-      return store.size
-    },
-    clear: () => {
-      store.clear()
-    },
-    getItem: (key) => store.get(key) ?? null,
-    key: (index) => Array.from(store.keys())[index] ?? null,
-    removeItem: (key) => {
-      store.delete(key)
-    },
-    setItem: (key, value) => {
-      store.set(key, value)
-    },
-  }
-}
-
-if (typeof window.localStorage === "undefined") {
-  Object.defineProperty(window, "localStorage", { configurable: true, value: makeMemoryStorage() })
-}
-
 const Harness = () => {
   const [tasks, setTasks] = Hooks.useAtom(TaskList.tasksAtom)
 
