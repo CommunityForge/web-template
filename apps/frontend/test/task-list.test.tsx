@@ -1,5 +1,6 @@
 import { describe, expect, it } from "@effect/vitest"
 import { fireEvent, render, waitFor, within } from "@testing-library/react"
+import * as Array from "effect/Array"
 import * as React from "react"
 
 import type * as Task from "../src/features/task-list/task.ts"
@@ -86,8 +87,8 @@ describe("TaskRow", () => {
     const checkbox = within(container).getByRole("checkbox", { name: `Mark "${TASK_A.text}" as done` })
     fireEvent.click(checkbox)
 
-    const [first] = within(container).getAllByRole("listitem")
-    expect(within(first).getByText(TASK_A.text)).toBeDefined()
+    const items = within(container).getAllByRole("listitem")
+    expect(within(Array.getUnsafe(items, 0)).getByText(TASK_A.text)).toBeDefined()
     expect(checkbox.getAttribute("aria-checked")).toBe("true")
   })
 
@@ -168,8 +169,8 @@ describe("TaskList", () => {
 
     fireEvent.click(within(container).getByRole("button", { name: `Move "${TASK_C.text}" up` }))
 
-    const [, second] = within(container).getAllByRole("listitem")
-    expect(within(second).getByText(TASK_C.text)).toBeDefined()
+    const items = within(container).getAllByRole("listitem")
+    expect(within(Array.getUnsafe(items, 1)).getByText(TASK_C.text)).toBeDefined()
 
     await waitFor(() => {
       expect(within(container).getByText(`Moved "${TASK_C.text}" to position 2 of 3`)).toBeDefined()
@@ -189,15 +190,15 @@ describe("TaskList", () => {
   it("reorders by dragging the third task to the top", () => {
     const { container } = render(<TaskListHarness initial={THREE_TASKS} />)
 
-    const [firstBefore, , thirdBefore] = within(container).getAllByRole("listitem")
-    fireEvent.dragStart(thirdBefore)
-    fireEvent.dragOver(firstBefore)
-    fireEvent.drop(firstBefore)
+    const before = within(container).getAllByRole("listitem")
+    fireEvent.dragStart(Array.getUnsafe(before, 2))
+    fireEvent.dragOver(Array.getUnsafe(before, 0))
+    fireEvent.drop(Array.getUnsafe(before, 0))
 
-    const [first, second, third] = within(container).getAllByRole("listitem")
-    expect(within(first).getByText(TASK_C.text)).toBeDefined()
-    expect(within(second).getByText(TASK_A.text)).toBeDefined()
-    expect(within(third).getByText(TASK_B.text)).toBeDefined()
+    const after = within(container).getAllByRole("listitem")
+    expect(within(Array.getUnsafe(after, 0)).getByText(TASK_C.text)).toBeDefined()
+    expect(within(Array.getUnsafe(after, 1)).getByText(TASK_A.text)).toBeDefined()
+    expect(within(Array.getUnsafe(after, 2)).getByText(TASK_B.text)).toBeDefined()
   })
 
   it("keeps ticking a task from moving it", () => {
@@ -205,8 +206,8 @@ describe("TaskList", () => {
 
     fireEvent.click(within(container).getByRole("checkbox", { name: `Mark "${TASK_B.text}" as done` }))
 
-    const [, second] = within(container).getAllByRole("listitem")
-    expect(within(second).getByText(TASK_B.text)).toBeDefined()
+    const items = within(container).getAllByRole("listitem")
+    expect(within(Array.getUnsafe(items, 1)).getByText(TASK_B.text)).toBeDefined()
   })
 
   it("makes the add box and every task's tick, wording, delete and move actions reachable by keyboard", () => {

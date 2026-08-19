@@ -1,3 +1,5 @@
+import * as Array from "effect/Array"
+import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 
 export const Task = Schema.Struct({
@@ -57,13 +59,18 @@ export const moveTask =
   (id: string, direction: "up" | "down"): Transform =>
   (tasks) => {
     const index = tasks.findIndex((task) => task.id === id)
-    if (index === -1) return tasks
+    // `Array.get` is `none` for the not-found `-1`, so the id check and the proof that the
+    // element spliced back in is a `Task` are the same step.
+    return Option.match(Array.get(tasks, index), {
+      onNone: () => tasks,
+      onSome: (moved) => {
+        const target = direction === "up" ? index - 1 : index + 1
+        if (target < 0 || target >= tasks.length) return tasks
 
-    const target = direction === "up" ? index - 1 : index + 1
-    if (target < 0 || target >= tasks.length) return tasks
-
-    const next = [...tasks]
-    const [moved] = next.splice(index, 1)
-    next.splice(target, 0, moved)
-    return next
+        const next = [...tasks]
+        next.splice(index, 1)
+        next.splice(target, 0, moved)
+        return next
+      },
+    })
   }

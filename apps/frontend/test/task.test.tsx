@@ -39,25 +39,35 @@ describe("addTask", () => {
   })
 })
 
+// The blocks below build their fixture from `makeTask` rather than `addTask` so the task under
+// test is a named binding -- there is nothing to dig back out of the list by index, and the
+// fixture does not depend on `addTask` (covered above) behaving correctly.
 describe("toggleTask", () => {
   it("ticks a task", () => {
-    const tasks = Task.addTask("Buy milk")([])
-    const toggled = Task.toggleTask(tasks[0].id)(tasks)
+    const first = Task.makeTask("Buy milk")
+    const tasks: ReadonlyArray<Task.Task> = [first]
 
-    expect(toggled[0].done).toBe(true)
+    const toggled = Task.toggleTask(first.id)(tasks)
+
+    expect(toggled.map((task) => task.done)).toEqual([true])
   })
 
   it("unticks a ticked task", () => {
-    const tasks = Task.addTask("Buy milk")([])
-    const ticked = Task.toggleTask(tasks[0].id)(tasks)
-    const unticked = Task.toggleTask(tasks[0].id)(ticked)
+    const first = Task.makeTask("Buy milk")
+    const tasks: ReadonlyArray<Task.Task> = [first]
 
-    expect(unticked[0].done).toBe(false)
+    const ticked = Task.toggleTask(first.id)(tasks)
+    const unticked = Task.toggleTask(first.id)(ticked)
+
+    expect(unticked.map((task) => task.done)).toEqual([false])
   })
 
   it("leaves a ticked task in the same position", () => {
-    const tasks = Task.addTask("Call the dentist")(Task.addTask("Buy milk")([]))
-    const toggled = Task.toggleTask(tasks[0].id)(tasks)
+    const first = Task.makeTask("Buy milk")
+    const second = Task.makeTask("Call the dentist")
+    const tasks: ReadonlyArray<Task.Task> = [first, second]
+
+    const toggled = Task.toggleTask(first.id)(tasks)
 
     expect(toggled.map((task) => task.text)).toEqual(["Buy milk", "Call the dentist"])
   })
@@ -65,33 +75,43 @@ describe("toggleTask", () => {
 
 describe("renameTask", () => {
   it("replaces wording for one id", () => {
-    const tasks = Task.addTask("Buy milk")([])
-    const renamed = Task.renameTask(tasks[0].id, "Buy oat milk")(tasks)
+    const first = Task.makeTask("Buy milk")
+    const tasks: ReadonlyArray<Task.Task> = [first]
 
-    expect(renamed[0].text).toBe("Buy oat milk")
+    const renamed = Task.renameTask(first.id, "Buy oat milk")(tasks)
+
+    expect(renamed.map((task) => task.text)).toEqual(["Buy oat milk"])
   })
 
   it("keeps done and position when renaming", () => {
-    const tasks = Task.addTask("Call the dentist")(Task.addTask("Buy milk")([]))
-    const ticked = Task.toggleTask(tasks[0].id)(tasks)
-    const renamed = Task.renameTask(tasks[0].id, "Buy oat milk")(ticked)
+    const first = Task.makeTask("Buy milk")
+    const second = Task.makeTask("Call the dentist")
+    const tasks: ReadonlyArray<Task.Task> = [first, second]
+
+    const ticked = Task.toggleTask(first.id)(tasks)
+    const renamed = Task.renameTask(first.id, "Buy oat milk")(ticked)
 
     expect(renamed.map((task) => task.text)).toEqual(["Buy oat milk", "Call the dentist"])
-    expect(renamed[0].done).toBe(true)
+    expect(renamed.map((task) => task.done)).toEqual([true, false])
   })
 
   it("returns the list unchanged for an empty or whitespace-only wording", () => {
-    const tasks = Task.addTask("Buy milk")([])
+    const first = Task.makeTask("Buy milk")
+    const tasks: ReadonlyArray<Task.Task> = [first]
 
-    expect(Task.renameTask(tasks[0].id, "")(tasks)).toBe(tasks)
-    expect(Task.renameTask(tasks[0].id, "   ")(tasks)).toBe(tasks)
+    expect(Task.renameTask(first.id, "")(tasks)).toBe(tasks)
+    expect(Task.renameTask(first.id, "   ")(tasks)).toBe(tasks)
   })
 })
 
 describe("removeTask", () => {
   it("drops one id, the rest keeping their relative order", () => {
-    const tasks = Task.addTask("Third")(Task.addTask("Second")(Task.addTask("First")([])))
-    const removed = Task.removeTask(tasks[1].id)(tasks)
+    const first = Task.makeTask("First")
+    const second = Task.makeTask("Second")
+    const third = Task.makeTask("Third")
+    const tasks: ReadonlyArray<Task.Task> = [first, second, third]
+
+    const removed = Task.removeTask(second.id)(tasks)
 
     expect(removed.map((task) => task.text)).toEqual(["First", "Third"])
   })
@@ -99,28 +119,40 @@ describe("removeTask", () => {
 
 describe("moveTask", () => {
   it("moves a task to the top", () => {
-    const tasks = Task.addTask("Third")(Task.addTask("Second")(Task.addTask("First")([])))
-    const moved = Task.moveTask(tasks[2].id, "up")(Task.moveTask(tasks[2].id, "up")(tasks))
+    const first = Task.makeTask("First")
+    const second = Task.makeTask("Second")
+    const third = Task.makeTask("Third")
+    const tasks: ReadonlyArray<Task.Task> = [first, second, third]
+
+    const moved = Task.moveTask(third.id, "up")(Task.moveTask(third.id, "up")(tasks))
 
     expect(moved.map((task) => task.text)).toEqual(["Third", "First", "Second"])
   })
 
   it("moves a task down", () => {
-    const tasks = Task.addTask("Third")(Task.addTask("Second")(Task.addTask("First")([])))
-    const moved = Task.moveTask(tasks[0].id, "down")(tasks)
+    const first = Task.makeTask("First")
+    const second = Task.makeTask("Second")
+    const third = Task.makeTask("Third")
+    const tasks: ReadonlyArray<Task.Task> = [first, second, third]
+
+    const moved = Task.moveTask(first.id, "down")(tasks)
 
     expect(moved.map((task) => task.text)).toEqual(["Second", "First", "Third"])
   })
 
   it("is a no-op moving the first task up", () => {
-    const tasks = Task.addTask("Second")(Task.addTask("First")([]))
+    const first = Task.makeTask("First")
+    const second = Task.makeTask("Second")
+    const tasks: ReadonlyArray<Task.Task> = [first, second]
 
-    expect(Task.moveTask(tasks[0].id, "up")(tasks)).toBe(tasks)
+    expect(Task.moveTask(first.id, "up")(tasks)).toBe(tasks)
   })
 
   it("is a no-op moving the last task down", () => {
-    const tasks = Task.addTask("Second")(Task.addTask("First")([]))
+    const first = Task.makeTask("First")
+    const second = Task.makeTask("Second")
+    const tasks: ReadonlyArray<Task.Task> = [first, second]
 
-    expect(Task.moveTask(tasks[1].id, "down")(tasks)).toBe(tasks)
+    expect(Task.moveTask(second.id, "down")(tasks)).toBe(tasks)
   })
 })
