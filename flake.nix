@@ -29,7 +29,6 @@
         "aarch64-darwin"
         "aarch64-linux"
         "x86_64-linux"
-        "x86_64-darwin"
       ];
       imports = [
         treefmt-nix.flakeModule
@@ -38,6 +37,7 @@
       ];
       perSystem =
         {
+          config,
           pkgs,
           system,
           ...
@@ -63,6 +63,7 @@
               ]
             ))
             pnpm
+            pkgs.act
             pkgs.oxfmt
             pkgs.oxlint
             pkgs.tsgolint
@@ -81,7 +82,25 @@
               ;
           };
           formatter = treefmt.config.build.wrapper;
-          checks = {
+          checks = config.packages // {
+            actionlint =
+              let
+                workflows = pkgs.lib.fileset.toSource {
+                  root = ./.;
+                  fileset = ./.github/workflows;
+                };
+              in
+              pkgs.runCommand "actionlint"
+                {
+                  nativeBuildInputs = [
+                    pkgs.actionlint
+                    pkgs.shellcheck
+                  ];
+                }
+                ''
+                  actionlint -color ${workflows}/.github/workflows/*.yml
+                  touch $out
+                '';
             formatting = treefmt.config.build.check self;
             spellcheck = pkgs.stdenv.mkDerivation {
               name = "spellcheck";
