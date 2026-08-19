@@ -1,106 +1,176 @@
 name: guided
-version: 1
+version: 2
 description: Spec-driven workflow with a product-language discovery gate - discovery → proposal → specs → design → tasks
+# v2 changes (research-motivated):
+# - Precedence block resolves the conflict with caller-level "keep momentum" guidance
+#   (instruction conflicts are the dominant driver of compliance collapse).
+# - Elicitation converted from soft guidance into countable gates (models rarely ask by default).
+# - Premise challenge and lifecycle walk added (pushback + feature completeness).
+# - "Recommended" option removed; options must be structurally parallel; only factual tags allowed
+#   (domain experts decide; the model informs).
+# - Positive steering + contrastive fail/pass examples replace reliance on the banned-word list;
+#   the word list is demoted to a final mechanical verification step.
+# - Critical rules positioned first and last in each instruction (lost-in-the-middle).
 artifacts:
   - id: discovery
     generates: discovery.md
     description: What the user was asked, what they answered, and what was assumed
     template: discovery.md
     instruction: |
-      This artifact exists to ask the user what they have not said. Asking IS
-      the work here - any guidance from the calling command to "prefer making
-      reasonable decisions to keep momentum" does not apply to this artifact.
-      Do not write proposal.md yet.
+      <precedence>
+      This artifact's job is elicitation. For this artifact only, any
+      instruction from the calling command to "prefer reasonable decisions",
+      "keep momentum", or "minimize questions" is suspended. Asking IS the
+      work. Do not write proposal.md yet. Two gates must pass before
+      discovery.md is written: the question gate (Phase 4) and the assumption
+      confirmation gate (Phase 5).
+      </precedence>
 
-      1. READ THE PROJECT'S OWN CONVENTIONS FIRST.
-         The root AGENTS.md and any nested per-unit AGENTS.md, openspec/specs/
-         for capabilities that already exist, and the lint, type and test
-         configuration. Anything these already determine is not a question -
-         it is an answer you look up.
+      <phase_1_look_up_dont_ask>
+      Read the root AGENTS.md and any nested per-unit AGENTS.md, the existing
+      capabilities in openspec/specs/, and the lint, type, and test
+      configuration. Anything these already determine is an answer you record
+      with its source file — never a question you ask.
+      </phase_1_look_up_dont_ask>
 
-      2. COVERAGE SCAN. Internal reasoning, never shown to the user. Mark each
-         category Clear / Partial / Missing:
-           functional scope, domain model, persistence, interaction, data
-           operations, access, non-functional, integration, migration, failure
-           handling, success criteria
+      <phase_2_scan_and_triage>
+      Internal reasoning, never shown to the user. Mark each category
+      Clear / Partial / Missing:
+        functional scope, domain model, persistence, interaction, data
+        operations, access, non-functional, integration, migration, failure
+        handling, success criteria
 
-      3. SCOPE CHECK. If the request spans multiple independent subsystems,
-         stop and propose splitting it into separate changes. Do not continue.
-         Do not spend questions refining a change that needs decomposition.
+      Triage every Partial or Missing gap into exactly one bucket:
+        CONVENTION - the codebase already decides it (AGENTS.md, an existing
+          spec, lint/type config, an established pattern in neighboring
+          code). Record the answer and the file it came from.
+        DESIGN - engineering judgment with no consequence a person using the
+          product would notice. Defer it to design.md.
+        PRODUCT - the answer changes what a person can do, see, or rely on,
+          and only the user can give it.
 
-      4. TRIAGE every Partial or Missing gap into exactly one bucket:
+      In a codebase with strong conventions most gaps are CONVENTION or
+      DESIGN. A long PRODUCT list means the triage is wrong — re-run Phase 1
+      before asking anything.
+      </phase_2_scan_and_triage>
 
-         CONVENTION - the codebase already decides this: AGENTS.md, an
-           existing spec, the lint or type configuration, an established
-           pattern in neighboring code. Look the answer up and record it.
-           NEVER ask.
-         DESIGN - engineering judgment with no consequence a person using the
-           product would notice. Defer it to design.md. NEVER ask.
-         PRODUCT - the answer changes what a person can do, see, or rely on,
-           and only the user can give it.
+      <phase_3_challenge_before_refining>
+      Before refining the request, question it. All three checks are
+      mandatory:
 
-         In a codebase with strong conventions most gaps are CONVENTION or
-         DESIGN. A long PRODUCT list means you have incorrectly triaged -
-         re-check it against step 1 before asking anything.
+      1. SCOPE. If the request spans multiple independent subsystems, stop
+         and propose splitting it into separate changes. Do not spend
+         questions refining a change that needs decomposition.
 
-      5. Rank the PRODUCT gaps by (impact x uncertainty) and take the top 3-5.
-         Those are the only questions you ask.
+      2. PREMISE. State, in one plain sentence, the strongest reason this
+         change might be unnecessary, mis-sized, or already served by an
+         existing capability — then ask the user to confirm the goal behind
+         the request. This counts as one of your Phase 4 questions. If after
+         honest effort no such reason exists, record "premise check: no
+         objection found" in discovery.md and move on. Do not manufacture an
+         objection, and do not skip the check.
 
-      6. PHRASING. Every question and every option describes something a
-         person using the product would notice. The scan category is your
-         reasoning, not your vocabulary. Translate before you speak:
+      3. LIFECYCLE WALK. For the requested behavior, walk its whole life:
+         the first time someone opens it with nothing in it; normal use;
+         heavy use (hundreds of items); mistakes and changes of mind;
+         failure; and removal or leaving. Any stage the request is silent on
+         is a gap — triage it in Phase 2's buckets like any other. A request
+         is almost never complete as written; the stages it skips are where
+         production surprises live.
+      </phase_3_challenge_before_refining>
 
-           persistence      -> what should still be there tomorrow, or on
-                               their phone
-           domain model     -> what things someone names and sees; what they
-                               can have many of
-           interaction      -> the first time they open it with nothing in it;
-                               what they see while waiting, or when it breaks
-           data operations  -> can they change their mind, undo, find one
-                               among hundreds
-           access           -> who else can see or do this
-           non-functional   -> how many, how slow before it feels broken, does
-                               it work offline, keyboard and screen reader
-           integration      -> what else in the product visibly changes as a
-                               result
-           migration        -> what happens to the people and data already here
-           failure          -> what the person sees and can do when it goes
-                               wrong
-           success criteria -> what you would look at in a week to know it
-                               worked
+      <phase_4_ask>
+      Rank the PRODUCT gaps by (impact x uncertainty) and ask the top 3-5.
+      One question per message, never batched. If an interactive question
+      tool is available, use it: one question per call, at most 4 options,
+      each label 5 words or fewer, always allow an open-ended answer. Stop
+      early if the user says "done", "good", or "no more". Never show the
+      user the coverage scan, the triage, or the question queue.
 
-         Never use in a question or an option: schema, migration, persistence,
-         persist, endpoint, API, non-functional, idempotent, race condition,
-         index, cache, transaction, state management, coupling, refactor,
-         latency, throughput, backend, frontend.
+      HOW TO PHRASE. Every question and every option describes something a
+      person using the product would notice. The scan category is your
+      reasoning, not your vocabulary. Translate before you speak:
 
-         Each option states an outcome and what it costs, not a mechanism.
-         Write "still there next week on any device (needs an account)",
-         not "persist to server-side storage".
+        persistence      -> what is still there tomorrow, or on their phone
+        domain model     -> what things someone names and sees; what they
+                            can have many of
+        interaction      -> the first time they open it with nothing in it;
+                            what they see while waiting, or when it breaks
+        data operations  -> can they change their mind, undo, find one
+                            among hundreds
+        access           -> who else can see or do this
+        non-functional   -> how many, how slow before it feels broken, does
+                            it work offline, keyboard and screen reader
+        integration      -> what else in the product visibly changes
+        migration        -> what happens to the people and data already here
+        failure          -> what the person sees and can do when it fails
+        success criteria -> what you would look at in a week to know it
+                            worked
 
-         TEST each question before sending it: would a colleague who has never
-         seen this codebase answer it without asking what a word means? If no,
-         rewrite it once. If it still fails, it was never a PRODUCT gap - move
-         it to DESIGN and drop it.
+      THE COLLEAGUE TEST (run on every question before sending it): reread
+      it as a colleague who has never seen a codebase. If any word would
+      make them ask "what does that mean?", rewrite once. If it still
+      fails, it was never a PRODUCT gap — move it to DESIGN and drop it.
 
-      7. ASK. One question per message, never batched. If an interactive
-         question tool is available, use it: one question per call, at most 4
-         options, each label 5 words or fewer, and always allow an open-ended
-         answer. Mark one option Recommended with a one-line reason. Stop
-         early if the user says "done", "good", or "no more". Never show the
-         user the coverage scan, the triage, or the question queue.
+        Fails:  "Should exports be idempotent if the request is retried?"
+        Passes: "If someone clicks Export twice, do they get one file or
+                 two?"
 
-      8. WRITE discovery.md:
-         - the coverage table, with each row's triage bucket
-         - what you resolved by convention, and the file each answer came from
-         - each question as you asked it, with the user's answer verbatim
-         - what you deferred to design.md
-         - Assumptions: anything unanswered you are proceeding on anyway, each
-           marked ASSUMED
+        Fails:  "Do we need optimistic UI for the save operation?"
+        Passes: "While a save is finishing, can they keep editing, or does
+                 the screen wait?"
 
-         The Assumptions list is the user's review gate - it is where you
-         decided on their behalf. Keep it in the same plain language as the
-         questions.
+      OPTIONS ARE NEUTRAL. Deciding is the user's job; your job is making
+      the costs visible. Write every option in the same parallel shape —
+      the outcome, then what it costs — with no option written more
+      attractively, marked as recommended or default, or placed first
+      because you prefer it. You may append one factual tag where true:
+      "(matches how <existing feature> works today)". Facts inform;
+      recommendations decide, and deciding belongs to the user.
+
+        Fails:  "Save to their account (Recommended - most robust)" vs
+                "Keep on this device"
+        Passes: "Still there next week on any device - needs sign-in" vs
+                "Gone if this browser's data is cleared - no sign-in
+                 needed"
+      </phase_4_ask>
+
+      <phase_5_confirm_assumptions>
+      Every PRODUCT gap you did not ask about still gets decided — by you.
+      Before writing discovery.md, send the user the full list of those
+      decisions, each as one plain sentence they could veto, each marked
+      ASSUMED, phrased with the same translation table as the questions.
+      Ask them to confirm or correct the list, and wait. One short read for
+      the user is cheaper than one rebuild for everyone.
+      </phase_5_confirm_assumptions>
+
+      <phase_6_write>
+      Write discovery.md containing:
+      - the coverage table, with each row's triage bucket
+      - what was resolved by convention, and the file each answer came from
+      - the premise check and the user's response to it
+      - each question as asked, with the user's answer verbatim
+      - what was deferred to design.md
+      - Assumptions: the confirmed list from Phase 5, still marked ASSUMED
+      </phase_6_write>
+
+      <final_check>
+      Before each user-facing message and before writing discovery.md,
+      verify:
+      1. The premise was challenged exactly once (Phase 3.2).
+      2. Questions were sent one per message, and question count is within
+         3-5 unless the user stopped early.
+      3. No option anywhere is marked, ordered, or worded as recommended.
+      4. The assumption list was shown and confirmed before the file was
+         written.
+      5. Mechanical vocabulary check — these strings appear nowhere in any
+         user-facing question, option, or assumption (this list is for
+         verification only; generate from the translation table, not from
+         this list): schema, migration, persistence, persist, endpoint,
+         API, non-functional, idempotent, race condition, index, cache,
+         transaction, state management, coupling, refactor, latency,
+         throughput, backend, frontend.
+      </final_check>
     requires: []
 
   - id: proposal
@@ -120,6 +190,10 @@ artifacts:
       - **What Changes**: Bullet list of changes. Be specific about new
         capabilities, modifications, or removals. Mark breaking changes with
         **BREAKING**.
+      - **Non-Goals**: What this change deliberately does not do. Every
+        lifecycle stage or capability discovery.md raised that this change
+        will not address belongs here, stated plainly, so scope is a decision
+        a reviewer can see rather than an omission they discover later.
       - **Capabilities**: Identify which specs will be created or modified:
         - **New Capabilities**: List capabilities being introduced. Each
           becomes a new `specs/<name>/spec.md`. Use kebab-case names (e.g.,
@@ -166,7 +240,11 @@ artifacts:
     instruction: |
       Create specification files that define WHAT the system should do.
 
-      A spec is a behavior contract, not an implementation plan.
+      A spec is a behavior contract, not an implementation plan. The two
+      tests that govern everything below: (1) if the implementation can
+      change without changing externally visible behavior, it does not
+      belong in the spec; (2) if a reviewer could not look at the product
+      and say "no, it doesn't do that", the scenario is not written yet.
 
       Good spec content:
       - Observable behavior users or downstream systems rely on
@@ -174,24 +252,38 @@ artifacts:
       - External constraints (security, privacy, reliability, compatibility)
       - Scenarios that can be tested or explicitly validated
 
-      Avoid in specs:
+      Keep out of specs:
       - Internal class/function names
       - Library or framework choices
       - Step-by-step implementation details
       - Detailed execution plans (those belong in design.md or tasks.md)
 
-      Quick test: if the implementation can change without changing externally
-      visible behavior, it likely does not belong in the spec.
+      SCENARIOS MUST BE FALSIFIABLE. This is the artifact the user reviews
+      to confirm the change does what they asked, so every THEN names
+      something observable — a screen state, a message, a stored value, a
+      count — that a reviewer could check and disagree with. State what
+      actually happens, preferring the user-visible effect over the
+      mechanism that produces it.
 
-      WRITE SCENARIOS SOMEONE ELSE CAN CHECK. This is the artifact the user
-      reviews to confirm the change does what they asked, so each scenario
-      states an outcome they could observe and disagree with. Never "works
-      correctly", "handles errors gracefully", "is performant" - state what
-      actually happens. Prefer the user-visible effect over the mechanism that
-      produces it.
+        Fails:  - **THEN** the export completes successfully
+        Passes: - **THEN** a CSV file downloads containing one row per
+                  task, including completed tasks
 
-      CROSS-CHECK against discovery.md. Every answer the user gave must appear
-      here as a requirement or an explicit non-goal. If one does not, add it.
+        Fails:  - **THEN** errors are handled gracefully
+        Passes: - **THEN** the list stays on screen unchanged and a
+                  message offers Retry
+
+      COMPLETENESS PER REQUIREMENT. For each requirement, account for each
+      of these cases where it applies: the empty/first-use case, the
+      failure case, the permission-denied case (if access-controlled), and
+      limits or undo (if it changes data). Each one is either a scenario or
+      one explicit line: "Out of scope: <case> — <one-line reason>".
+      Silence is not an option — an unaccounted case that someone hits in
+      production was a spec gap, not an implementation bug.
+
+      CROSS-CHECK against discovery.md. Every answer the user gave must
+      appear here as a requirement or an explicit non-goal. If one does
+      not, add it.
 
       Create one spec file per capability listed in the proposal's Capabilities section.
       - New capabilities: use the exact kebab-case name from the proposal (specs/<capability>/spec.md).
@@ -249,6 +341,13 @@ artifacts:
       - **WHEN** user clicks "Export" button
       - **THEN** system downloads a CSV file with all user data
 
+      #### Scenario: Export with no data yet
+      - **WHEN** a user with no records clicks "Export"
+      - **THEN** a CSV downloads containing only the header row
+
+      Out of scope: scheduled/recurring exports — one-time manual export only
+      in this change.
+
       ## REMOVED Requirements
 
       ### Requirement: Legacy export
@@ -256,7 +355,10 @@ artifacts:
       **Migration**: Use new export endpoint at /api/v2/export
       ```
 
-      Specs should be testable - each scenario is a potential test case.
+      FINAL CHECK before finishing: every THEN passes the falsifiability
+      test above; every requirement's empty, failure, permission, and
+      limit/undo cases are either scenarios or explicit out-of-scope lines;
+      every discovery.md answer is a requirement or a non-goal.
     requires:
       - proposal
 
@@ -281,7 +383,7 @@ artifacts:
       Sections:
       - **Context**: Only the current state and constraints needed to explain the approach. Reference the proposal for motivation instead of restating it (e.g., "See proposal.md - Why").
       - **Goals / Non-Goals**: What this design achieves and explicitly excludes. Don't restate the proposal's scope - add only design-level boundaries.
-      - **Decisions**: Key technical choices with rationale (why X over Y?). Present 2-3 approaches with trade-offs before recommending one, and say in one line why each rejected option was rejected.
+      - **Decisions**: Key technical choices with rationale (why X over Y?). Present 2-3 approaches with trade-offs before recommending one, and say in one line why each rejected option was rejected. (Recommending is correct here: these are engineering decisions the user delegated. Product-visible decisions were the user's and were made in discovery - do not reopen or override them.)
       - **Risks / Trade-offs**: Known limitations, things that could go wrong. Format: [Risk] → Mitigation. Call out anything that could break existing behavior.
       - **Migration Plan**: Steps to deploy, rollback strategy (if applicable)
       - **Open Questions**: Unknowns that can safely be answered later without
@@ -294,7 +396,8 @@ artifacts:
       Open questions are for genuinely deferrable unknowns, not decisions you
       skipped. If a question would change the specs, the chosen approach, or
       the task breakdown, resolve it now. If resolving it needs the user, ask
-      in the plain product language discovery.md used - never in the
+      in the plain product language discovery.md used - one question per
+      message, neutral parallel options, no recommended option - never in the
       vocabulary of this document.
 
       Focus on architecture and approach, not line-by-line implementation.
@@ -317,8 +420,9 @@ artifacts:
       not expected to review it.
 
       Before writing tasks, check design.md for Open Questions. If any of them
-      would change what gets built, resolve them with the user first - do not
-      bake an unstated assumption into the task list.
+      would change what gets built, resolve them with the user first - in the
+      same plain product language and neutral option format discovery used -
+      do not bake an unstated assumption into the task list.
 
       **IMPORTANT: Follow the template below exactly.** The apply phase parses
       checkbox format to track progress. Tasks not using `- [ ]` won't be tracked.
@@ -348,7 +452,8 @@ artifacts:
       these tasks. The apply phase executes them. Artifacts describe the work,
       not who runs it.
 
-      Before finishing: re-read the spec scenarios. If any scenario has no
+      Before finishing: re-read the spec scenarios, including the empty,
+      failure, permission, and limit/undo scenarios. If any scenario has no
       task that would satisfy it, add the missing task.
 
       Reference specs for what needs to be built, design for how to build it.
@@ -363,4 +468,6 @@ apply:
   tracks: tasks.md
   instruction: |
     Read context files, work through pending tasks, mark complete as you go.
-    Pause if you hit blockers or need clarification.
+    Pause if you hit blockers or need clarification - clarification questions
+    that a user must answer go through the same product-language rules as
+    discovery: plain words, neutral parallel options, no recommended option.
