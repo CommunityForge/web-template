@@ -1,7 +1,7 @@
-import * as Atom from "@effect/atom-react"
+import * as Hooks from "@effect/atom-react/Hooks"
 import * as React from "react"
 
-import { appearanceAtom } from "../atoms.ts"
+import * as Atoms from "../atoms.ts"
 
 /**
  * Mirrors `appearanceAtom` onto `<html>`'s class list, which is what Tailwind's `dark:` variant reads. Renders nothing
@@ -11,7 +11,7 @@ import { appearanceAtom } from "../atoms.ts"
  * writes the result out to a DOM node React does not own.
  */
 export function ThemeSync() {
-  const appearance = Atom.useAtomValue(appearanceAtom)
+  const appearance = Hooks.useAtomValue(Atoms.appearanceAtom)
 
   React.useEffect(() => {
     const root = window.document.documentElement

@@ -1,4 +1,4 @@
-import { Outlet } from "react-router"
+import * as ReactRouter from "react-router"
 
 import * as AppSidebar from "@/components/app-sidebar"
 import * as Sidebar from "@/components/ui/sidebar"
@@ -19,7 +19,7 @@ export function RootLayout() {
           <div className="grow" />
           <Theme.ModeToggle />
         </header>
-        <Outlet />
+        <ReactRouter.Outlet />
       </Sidebar.SidebarInset>
     </Sidebar.SidebarProvider>
   )

@@ -1,25 +1,25 @@
 import { describe, expect, it } from "@effect/vitest"
 import { fireEvent, render, waitFor, within } from "@testing-library/react"
-import { useCallback, useState } from "react"
+import * as React from "react"
 
-import type { Task } from "../src/features/task-list/task.ts"
+import type * as Task from "../src/features/task-list/task.ts"
 
-import { AddTaskForm } from "../src/features/task-list/components/AddTaskForm.tsx"
-import { TaskList } from "../src/features/task-list/components/TaskList.tsx"
+import * as AddTaskForm from "../src/features/task-list/components/AddTaskForm.tsx"
+import * as TaskList from "../src/features/task-list/components/TaskList.tsx"
 
 // Every component here is presentational -- `tasks`/`setTasks` are props all the way down
 // from `routes/Tasks.tsx` -- so these tests hold their own `useState` rather than mounting a
 // `RegistryProvider` against the real, `localStorage`-backed atom. That keeps them free of the
 // durability file's concurrency concerns entirely (see `task-list-storage.test.tsx`).
 function AddTaskFormHarness() {
-  const [tasks, setTasksState] = useState<ReadonlyArray<Task>>([])
-  const setTasks = useCallback((update: (tasks: ReadonlyArray<Task>) => ReadonlyArray<Task>) => {
+  const [tasks, setTasksState] = React.useState<ReadonlyArray<Task.Task>>([])
+  const setTasks = React.useCallback((update: (tasks: ReadonlyArray<Task.Task>) => ReadonlyArray<Task.Task>) => {
     setTasksState((previous) => update(previous))
   }, [])
 
   return (
     <div>
-      <AddTaskForm setTasks={setTasks} />
+      <AddTaskForm.AddTaskForm setTasks={setTasks} />
       <ul>
         {tasks.map((task) => (
           <li key={task.id}>{task.text}</li>
@@ -29,30 +29,30 @@ function AddTaskFormHarness() {
   )
 }
 
-function TaskListHarness({ initial }: { readonly initial: ReadonlyArray<Task> }) {
-  const [tasks, setTasksState] = useState<ReadonlyArray<Task>>(initial)
-  const setTasks = useCallback((update: (tasks: ReadonlyArray<Task>) => ReadonlyArray<Task>) => {
+function TaskListHarness({ initial }: { readonly initial: ReadonlyArray<Task.Task> }) {
+  const [tasks, setTasksState] = React.useState<ReadonlyArray<Task.Task>>(initial)
+  const setTasks = React.useCallback((update: (tasks: ReadonlyArray<Task.Task>) => ReadonlyArray<Task.Task>) => {
     setTasksState((previous) => update(previous))
   }, [])
 
   return (
-    <TaskList
+    <TaskList.TaskList
       tasks={tasks}
       setTasks={setTasks}
     />
   )
 }
 
-const TASK_A: Task = { id: "a", text: "Buy milk", done: false }
-const TASK_B: Task = { id: "b", text: "Call the dentist", done: false }
-const TASK_C: Task = { id: "c", text: "Water the plants", done: false }
+const TASK_A: Task.Task = { id: "a", text: "Buy milk", done: false }
+const TASK_B: Task.Task = { id: "b", text: "Call the dentist", done: false }
+const TASK_C: Task.Task = { id: "c", text: "Water the plants", done: false }
 
 // `react-perf/jsx-no-new-array-as-prop` is an error repo-wide, so every array handed to
 // `initial` is a module-scope constant rather than an inline literal.
-const NO_TASKS: ReadonlyArray<Task> = []
-const ONE_TASK: ReadonlyArray<Task> = [TASK_A]
-const TWO_TASKS: ReadonlyArray<Task> = [TASK_A, TASK_B]
-const THREE_TASKS: ReadonlyArray<Task> = [TASK_A, TASK_B, TASK_C]
+const NO_TASKS: ReadonlyArray<Task.Task> = []
+const ONE_TASK: ReadonlyArray<Task.Task> = [TASK_A]
+const TWO_TASKS: ReadonlyArray<Task.Task> = [TASK_A, TASK_B]
+const THREE_TASKS: ReadonlyArray<Task.Task> = [TASK_A, TASK_B, TASK_C]
 
 describe("AddTaskForm", () => {
   it("adds a task on Enter and clears the box", () => {

@@ -1,6 +1,6 @@
-import { Link } from "react-router"
+import * as ReactRouter from "react-router"
 
-import { buttonVariants } from "@/components/ui/button"
+import * as Button from "@/components/ui/button"
 
 // The index route. Every section here is a direct child of the `#root` flex column declared in
 // `index.html`, so this returns a fragment rather than a wrapper element.
@@ -11,12 +11,12 @@ export function Home() {
         Welcome
       </h1>
       <p className="mb-8 max-w-[36ch]">Manage your tasks from the sidebar.</p>
-      <Link
+      <ReactRouter.Link
         to="/tasks"
-        className={buttonVariants({ variant: "default" })}
+        className={Button.buttonVariants({ variant: "default" })}
       >
         Go to tasks
-      </Link>
+      </ReactRouter.Link>
     </section>
   )
 }

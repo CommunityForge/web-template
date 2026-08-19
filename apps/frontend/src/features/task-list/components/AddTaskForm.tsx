@@ -2,9 +2,9 @@ import * as React from "react"
 
 import * as Input from "@/components/ui/input"
 
-import * as Tasks from "../task.ts"
+import * as Task from "../task.ts"
 
-export function AddTaskForm({ setTasks }: { readonly setTasks: Tasks.SetTasks }) {
+export function AddTaskForm({ setTasks }: { readonly setTasks: Task.SetTasks }) {
   const [text, setText] = React.useState("")
 
   const onChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -14,7 +14,7 @@ export function AddTaskForm({ setTasks }: { readonly setTasks: Tasks.SetTasks })
   const onSubmit = React.useCallback(
     (event: React.SubmitEvent<HTMLFormElement>) => {
       event.preventDefault()
-      setTasks(Tasks.addTask(text))
+      setTasks(Task.addTask(text))
       setText("")
     },
     [setTasks, text],

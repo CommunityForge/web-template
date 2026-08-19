@@ -1,6 +1,6 @@
-import { Link } from "react-router"
+import * as ReactRouter from "react-router"
 
-import { buttonVariants } from "@/components/ui/button"
+import * as Button from "@/components/ui/button"
 
 // Arbitrary font sizes rather than `text-5xl`/`text-lg`: Tailwind's named sizes ship a paired
 // line-height and this app's type inherits 145% from `:root`.
@@ -11,7 +11,7 @@ const HEADING =
 // Same treatment as the links on the home page: a styled `<a>`, not `<Button render={<a/>}>`.
 // `<Link>` renders a real anchor with an `href`, so it keeps link semantics while picking up the
 // `secondary` variant's colors.
-const LINK = buttonVariants({
+const LINK = Button.buttonVariants({
   variant: "secondary",
   className:
     "gap-2 rounded-[6px] px-3 py-1.5 text-base font-normal transition-shadow duration-300 hover:bg-secondary hover:shadow-link",
@@ -25,12 +25,12 @@ export function NotFound() {
       <p className={STATUS}>404</p>
       <h1 className={HEADING}>Page not found</h1>
       <p className="mb-8 max-w-[36ch]">That URL does not match any route in this app.</p>
-      <Link
+      <ReactRouter.Link
         to="/"
         className={LINK}
       >
         Back to the home page
-      </Link>
+      </ReactRouter.Link>
     </section>
   )
 }

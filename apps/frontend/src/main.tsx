@@ -8,7 +8,7 @@ import * as Tooltip from "@/components/ui/tooltip"
 import "@/index.css"
 import * as Theme from "@/features/theme"
 
-import App from "./App.tsx"
+import * as App from "./App.tsx"
 
 // `RegistryProvider` is not strictly required -- `@effect/atom-react` falls back to a registry
 // created at module scope, and a single-page app has exactly one client, so that fallback would
@@ -33,7 +33,7 @@ ReactDom.createRoot(document.getElementById("root")!).render(
       <Tooltip.TooltipProvider>
         <Sidebar.SidebarProvider>
           <ReactRouter.BrowserRouter>
-            <App />
+            <App.App />
           </ReactRouter.BrowserRouter>
         </Sidebar.SidebarProvider>
       </Tooltip.TooltipProvider>

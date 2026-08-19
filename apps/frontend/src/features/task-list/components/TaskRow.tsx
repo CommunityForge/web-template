@@ -4,9 +4,7 @@ import * as Button from "@/components/ui/button"
 import * as Checkbox from "@/components/ui/checkbox"
 import * as Input from "@/components/ui/input"
 
-import type { SetTasks, Task } from "../task.ts"
-
-import { moveTask, removeTask, renameTask, toggleTask } from "../task.ts"
+import * as Task from "../task.ts"
 
 export function TaskRow({
   task,
@@ -18,10 +16,10 @@ export function TaskRow({
   onRowDragStart,
   onRowDrop,
 }: {
-  readonly task: Task
+  readonly task: Task.Task
   readonly position: number
   readonly total: number
-  readonly setTasks: SetTasks
+  readonly setTasks: Task.SetTasks
   readonly announce: (message: string) => void
   readonly onDragOver: React.DragEventHandler<HTMLLIElement>
   readonly onRowDragStart: (id: string) => void
@@ -46,7 +44,7 @@ export function TaskRow({
   }, [task.text])
 
   const commit = React.useCallback(() => {
-    setTasks(renameTask(task.id, draft))
+    setTasks(Task.renameTask(task.id, draft))
     setEditing(false)
   }, [setTasks, task.id, draft])
 
@@ -78,16 +76,16 @@ export function TaskRow({
   )
 
   const onToggle = React.useCallback(() => {
-    setTasks(toggleTask(task.id))
+    setTasks(Task.toggleTask(task.id))
   }, [setTasks, task.id])
 
   const onDelete = React.useCallback(() => {
-    setTasks(removeTask(task.id))
+    setTasks(Task.removeTask(task.id))
   }, [setTasks, task.id])
 
   const move = React.useCallback(
     (direction: "up" | "down") => {
-      setTasks(moveTask(task.id, direction))
+      setTasks(Task.moveTask(task.id, direction))
       const newIndex = direction === "up" ? position - 1 : position + 1
       announce(`Moved "${task.text}" to position ${newIndex + 1} of ${total}`)
     },
