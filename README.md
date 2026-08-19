@@ -1,4 +1,9 @@
-# Monorepo scaffolding
+# Community Forge Web Template
+
+> [!WARNING]
+> This project is a work-in-progress.
+> Breaking changes will be frequent.
+> Public-facing documentation, including installation instructions, is incomplete.
 
 A minimal, app-agnostic pnpm + TypeScript + Effect monorepo with reproducible Nix builds.
 Structure follows [Effect](https://github.com/Effect-TS/effect)'s conventions; the Nix layer

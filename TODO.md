@@ -4,24 +4,27 @@
 
 ### Choice Frameworks & Software
 
-- [x] Serverless React SPA scaffold
-- [ ] Supabase for any shared persistence
-- [x] Shadcn component library
-- [x] Lucide icon library
-- [x] TailwindCSS v4 styling
-- [x] Effect state management, side-effect handling, reactivity via Atom
+- [x] Serverless [React][react] SPA scaffold (not best-in-class but viable)
+- [ ] [Supabase][supabase] for any shared persistence
+- [x] [Shadcn][shadcn] component library
+- [x] [Lucide][lucide] icon library
+- [x] [TailwindCSS][tailwindcss] v4 styling
+- [x] [Effect][effect] state management, side-effect handling, reactivity via Atom
 
 ### Determinism & Safety
 
-- [x] Nix for deterministic builds and verifiable, agnostic environments
+- [x] [Nix flakes][nix-flakes] for deterministic builds and verifiable, agnostic environments
+- [x] [PNPM][pnpm] FOD hashing with custom solution
+- [x] Local `./claude` directory for denying writes above repo root _(partial)_
 
 ### Feedback
 
-- [x] Type checking
-- [x] Unit testing
-- [x] Integration testing
-- [x] Formatting
-- [x] Type-aware linting
+- [x] Type checking (`tsgo`)
+- [x] Unit testing ([Vitest][vitest])
+- [x] Integration testing (Vitest)
+- [x] Formatting ([`oxc`][oxc] with [`treefmt-nix`][treefmt-nix] wrapper)
+- [x] Type-aware linting (`oxc`)
+- [x] GHA linting (`actionlint`)
 
 ### Harnessing & Context
 
@@ -29,11 +32,11 @@
   - [x] Official `effect-ts` skill
   - [x] Custom `effect-atom-react` skill with `Effect-TS/website` as prior art
   - [x] `supabase` _(**TODO:** consider if necessary per project)_
-  - [ ] Shadcn MCP **(?)**
+  - [ ] Shadcn MCP **(?)** is a skill for now
 - [x] [OpenSpec][openspec] for tracking delta across product-based specifications
-- [ ] [Superpowers][superpowers] for agentic workflow
-- [ ] E2E harnessing with LLM-run browser support - consider responsive layout and screenshotting automation
-- [ ] Install hooks for static analysis checks
+- [ ] ~~[Superpowers][superpowers] for agentic workflow; potentially too heavy~~
+- [ ] E2E harnessing with LLM-run browser support; consider responsive layout and screenshotting automation
+- [x] Install hooks for static analysis checks; needs testing
 
 ## Design Solutioning
 
@@ -41,16 +44,17 @@
 
 ## User Experience
 
-- [ ] Interface for lay usage; likely Claude Desktop
+- [x] Interface for lay usage; likely Claude Desktop
 
 ## Security
 
 - [x] Custom sandboxing is too rigid; fell back to Claude's built-in sandbox (`nono` removed)
-- [ ] How to handle CVEs and dependency upgrades?
+- [ ] How to handle regular CVEs and dependency upgrades?
 
 ## Deployment
 
-- [ ] GitHub Actions
+- [x] GitHub Actions
+  - [x] Flake checks
 - [ ] Choose between staging and blue/green for human-in-the-loop testing
 - [x] Static SPA export for agnostic hosting
 
@@ -62,6 +66,18 @@
 
 - How best to achieve OpenSpec + Superpowers combination?
   - https://github.com/Fission-AI/OpenSpec/pull/970
+  - Can likely do better with DSPy
 
+[effect]: https://effect.website
+[lucide]: https://lucide.dev/
+[nix-flakes]: https://determinate.systems/blog/nix-flakes-explained/
 [openspec]: https://openspec.dev/
+[oxc]: https://oxc.rs/
+[pnpm]: https://pnpm.io/
+[react]: https://react.dev/
+[shadcn]: https://ui.shadcn.com/
+[supabase]: https://supabase.com/
 [superpowers]: https://github.com/obra/superpowers
+[tailwindcss]: https://tailwindcss.com/
+[treefmt-nix]: https://github.com/numtide/treefmt-nix
+[vitest]: https://vitest.dev/
