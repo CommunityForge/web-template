@@ -1,0 +1,18 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "frontend",
+      "runtimeExecutable": "nix",
+      "runtimeArgs": [
+        "develop",
+        "-c",
+        "pnpm",
+        "--filter",
+        "frontend",
+        "dev"
+      ],
+      "port": 5173
+    }
+  ]
+}
