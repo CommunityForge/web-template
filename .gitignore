@@ -35,4 +35,5 @@ result-*
 !.claude/commands/
 !.claude/agents/
 !.claude/skills/
+!.claude/output-styles
 .agents/skills/*-workspace/
