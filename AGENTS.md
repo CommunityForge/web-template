@@ -41,9 +41,6 @@ tool versions and no native postinstall to run inside the build sandbox. Consequ
 | `nix flake check`    | `formatting`, `spellcheck` (typos)                                       |
 | `nix build .#<unit>` | Reproducible build of one unit; its `checkPhase` re-runs check/test/lint |
 
-`pnpm lint` already passes `--type-aware`, so the tsgolint rules run locally. The per-unit
-`nix build` runs the same pass inside its `checkPhase`, which is what gates a release build.
-
 ### Formatting
 
 `nix fmt` is treefmt over nixfmt, shfmt, shellcheck and oxfmt. oxfmt is not JS/TS-only — its
@@ -73,11 +70,12 @@ bundler-built leaf, not a composite project. See `apps/frontend/AGENTS.md`.
 
 ## Repo-wide rules
 
-- **Every dependency resolves through `catalog:`, `catalog:effect`, or `workspace:` — never a
-  literal version.** This is the one rule that keeps the tree coherent as the repo grows, and it
-  is what makes `pnpm add <pkg>` the wrong command: edit the manifest and the catalog in
-  `pnpm-workspace.yaml`, then install. The named `effect` catalog exists so the whole Effect line
-  moves in lockstep.
+- **Every dependency shared across units resolves through `catalog:`, `catalog:effect`, or
+  `workspace:`; unit-local dependencies may pin ordinary ranges** (the frontend's React stack and
+  the root's Babel toolchain do). The catalogs are what keep the shared tree coherent as the repo
+  grows, and they make `pnpm add <pkg>` the wrong command: edit the manifest — and the catalog in
+  `pnpm-workspace.yaml` for a shared dependency — then install. The named `effect` catalog exists
+  so the whole Effect line moves in lockstep.
 - **Never add `eslint`, `eslint-config-next`, or typescript-eslint.** The repo runs
   `typescript@7` (Effect's tsgo build) and typescript-eslint hard-refuses to load against it. The
   type-aware pass uses tsgolint, which reads types through the same Go compiler.
@@ -162,8 +160,7 @@ test importing a package its unit does not depend on. Vitest will.
    `tsconfig.tests.json`.
 
 That is the whole checklist — `pnpm-workspace.yaml` and `vitest.config.ts` glob `packages/*`
-already. Verified by copying `packages/core` and confirming only steps 2 and 3 touch anything
-outside the new directory.
+already.
 
 `packages/core` is a placeholder holding one `Greeting.ts`, to be deleted once real modules land.
 
@@ -253,20 +250,14 @@ also pins the tools hooks run with in GUI-launched clients, whose PATH is otherw
 (Apple bash 3.2, BSD userland) — the scripts stay compatible with both, and `bin/test-hooks.sh`
 exercises the guard in each mode.
 
-## Workflow tooling
-
-OpenSpec and Superpowers are both installed, and the boundary between them is settled and
-enforced — the next section is the reference, and `.claude/hooks/boundary-guard.sh` is what
-actually blocks a violation. Still do not open an OpenSpec change unless asked to.
-
 <!-- BEGIN openspec-boundary -->
 
 ## Workflow boundary: OpenSpec owns this project
 
-**This section is context, not the enforcement mechanism.** The boundary is
-enforced by a PreToolUse hook at `.claude/hooks/boundary-guard.sh`, which
-blocks the tool call outright. This text exists so you understand _why_
-before you hit a denial — a rule you understand is one you don't trip over.
+OpenSpec and Superpowers are both installed. This section is context, not the enforcement
+mechanism: a PreToolUse hook at `.claude/hooks/boundary-guard.sh` blocks a violating tool call
+outright, and this text exists so the denial never surprises you. Open an OpenSpec change only
+when asked to.
 
 ### The situation
 

@@ -2,10 +2,6 @@
 
 **Framework:** Vite + React 19 + Tailwind 4 SPA.
 
-Everything in `src/` is scaffold — `routes/{Home,NotFound,RootLayout}.tsx` is a shell and
-`features/counter/` a reference slice. Both go when real features land. The rules below are
-properties of the tooling, so they outlive them.
-
 ## It is a leaf, not a project reference
 
 `tsconfig.app.json` and `tsconfig.node.json` extend `../../tsconfig.base.json` and switch off its
