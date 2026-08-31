@@ -44,6 +44,15 @@
             "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/boundary-guard.sh"
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/block-dangerous-git.sh"
+          }
+        ]
       }
     ],
     "SessionStart": [
