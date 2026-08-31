@@ -37,7 +37,7 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Write|Edit|MultiEdit|NotebookEdit|Task|Skill|Bash",
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit|Skill|SlashCommand|Bash",
         "hooks": [
           {
             "type": "command",

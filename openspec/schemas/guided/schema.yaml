@@ -63,7 +63,7 @@ artifacts:
          questions refining a change that needs decomposition.
 
       2. PREMISE. State, in one plain sentence, the strongest reason this
-         change might be unnecessary, mis-sized, or already served by an
+         change might be unnecessary, wrongly sized, or already served by an
          existing capability — then ask the user to confirm the goal behind
          the request. This counts as one of your Phase 4 questions. If after
          honest effort no such reason exists, record "premise check: no

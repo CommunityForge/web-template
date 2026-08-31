@@ -8,6 +8,10 @@
 # Exit 0 = clean, 1 = problems found.
 
 set -uo pipefail
+export LC_ALL=C
+if [ -d "$PWD/.devshell/bin" ]; then
+  PATH="$PWD/.devshell/bin:$PATH"
+fi
 
 FAIL=0
 ok() { printf '  \033[32mOK\033[0m    %s\n' "$1"; }

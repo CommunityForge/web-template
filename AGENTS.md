@@ -228,9 +228,10 @@ There is no custom sandbox wrapper. Claude Code's own sandbox — configured in
 tracked.
 
 Because `./.claude` can be `CLAUDE_CONFIG_DIR`, it mixes tracked project config with runtime
-state. `.gitignore` ignores `.claude/*` and re-includes only `settings.json`, `hooks/`, `commands/`,
-`agents/` and `skills/`, so credentials and session history stay out of git while a clone still
-gets the workflow boundary. Add a re-include when you add a new config directory there.
+state. `.gitignore` ignores `.claude/*` and re-includes only `settings.json`, `launch.json`,
+`hooks/`, `commands/`, `agents/`, `skills/` and `output-styles/`, so credentials and session
+history stay out of git while a clone still gets the workflow boundary. Add a re-include when you
+add a new config directory there.
 
 ## Agents in a sandboxed client
 
@@ -245,6 +246,12 @@ The alternative for anyone who would rather not widen the sandbox: `nix build .#
 that survives flake bumps. Reads under `/nix/store` are already permitted, so an agent can use it
 without reaching the daemon at all. `nix-direnv`'s cached `.direnv/flake-profile` is the same
 environment as JSON if the out-link is absent.
+
+The toolchain also bundles `bash`, coreutils, findutils, GNU `grep` and GNU `sed`, and the hook
+scripts prepend `.devshell/bin` to their PATH when the out-link exists. Building it once therefore
+also pins the tools hooks run with in GUI-launched clients, whose PATH is otherwise the host's
+(Apple bash 3.2, BSD userland) — the scripts stay compatible with both, and `bin/test-hooks.sh`
+exercises the guard in each mode.
 
 ## Workflow tooling
 
@@ -272,11 +279,14 @@ So: OpenSpec is the workflow. Superpowers is a library you borrow from.
 
 ### What the hook blocks, and why
 
-| Blocked                                                           | Reason                                                        |
-| ----------------------------------------------------------------- | ------------------------------------------------------------- |
-| Writes to `docs/superpowers/plans/` or `docs/superpowers/specs/`  | Duplicate artifacts OpenSpec never syncs or archives          |
-| `writing-plans`, `executing-plans`, `subagent-driven-development` | Second orchestrator; the expensive execution path             |
-| `REQUIRED SUB-SKILL` text inside `openspec/changes/` files        | Makes an artifact re-arm the sub-agent path in later sessions |
+| Blocked                                                                                                    | Reason                                                        |
+| ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| Writes to `docs/superpowers/plans/` or `docs/superpowers/specs/`                                           | Duplicate artifacts OpenSpec never syncs or archives          |
+| Invoking `writing-plans`, `executing-plans` or `subagent-driven-development` (Skill tool or slash command) | Second orchestrator; the expensive execution path             |
+| `REQUIRED SUB-SKILL` text inside `openspec/changes/` files                                                 | Makes an artifact re-arm the sub-agent path in later sessions |
+
+Only actual invocations are inspected — mentioning those skill names in prose,
+docs, or a subagent prompt is not blocked.
 
 If you are blocked, the denial message names the correct alternative. Follow
 it rather than looking for a way around.

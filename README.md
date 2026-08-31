@@ -29,6 +29,11 @@ A bare `replaceme` search-and-replace will not do: it also matches inside the wo
 Every command assumes the Nix dev shell, which supplies Node, pnpm, oxlint, oxfmt, tsgolint and
 typos — there is no `packageManager` field and no `.nvmrc`.
 
+The only host prerequisite is Nix itself, installed with a daemon (the standard multi-user
+installer — the tracked sandbox config in `.claude/settings.json` talks to the daemon socket).
+From there, install Nix, clone, and point Claude Code at the repo root; an agent bootstraps
+through `nix develop -c` on its own. The steps below are the same bootstrap for a human:
+
 ```sh
 git submodule update --init --recursive # reference checkouts under .repos/, for agents
 direnv allow                            # or: nix develop

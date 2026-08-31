@@ -56,13 +56,16 @@
             agentsPkgs.claude-code
             agentsPkgs.openspec
             nodejs
-            # `.claude/hooks/boundary-guard.sh` parses YAML with this.
-            (pkgs.python3.withPackages (
-              ps: with ps; [
-                pyyaml
-              ]
-            ))
             pnpm
+            # Hook scripts prepend `.devshell/bin` to PATH when the out-link
+            # exists, pinning these over the host's BSD tools in GUI-launched
+            # clients -- see AGENTS.md "Agents in a sandboxed client". The dev
+            # shell itself already carries them via stdenv.
+            pkgs.bash
+            pkgs.coreutils
+            pkgs.findutils
+            pkgs.gnugrep
+            pkgs.gnused
             pkgs.act
             pkgs.oxfmt
             pkgs.oxlint

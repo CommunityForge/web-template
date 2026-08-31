@@ -36,4 +36,5 @@ result-*
 !.claude/agents/
 !.claude/skills/
 !.claude/output-styles
+!.claude/launch.json
 .agents/skills/*-workspace/
