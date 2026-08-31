@@ -29,10 +29,25 @@ A bare `replaceme` search-and-replace will not do: it also matches inside the wo
 Every command assumes the Nix dev shell, which supplies Node, pnpm, oxlint, oxfmt, tsgolint and
 typos — there is no `packageManager` field and no `.nvmrc`.
 
-The only host prerequisite is Nix itself, installed with a daemon (the standard multi-user
-installer — the tracked sandbox config in `.claude/settings.json` talks to the daemon socket).
+The only host prerequisite is Nix itself, installed with a daemon — the tracked sandbox config in
+`.claude/settings.json` talks to the daemon socket. The
+[Determinate Systems installer](https://github.com/DeterminateSystems/nix-installer) is the
+recommended path: one command, flakes enabled out of the box, and a clean uninstall. Any other
+multi-user install works too.
 From there, install Nix, clone, and point Claude Code at the repo root; an agent bootstraps
-through `nix develop -c` on its own. The steps below are the same bootstrap for a human:
+through `nix develop -c` on its own.
+
+First-time humans can run the interactive setup wizard instead. Bring only a Unix shell and
+`git`: macOS Terminal and Linux qualify as-is, and on Windows use WSL2 (`wsl --install` from an
+Administrator PowerShell, then work inside the WSL filesystem, not `/mnt/c`). The wizard checks
+both prerequisites and walks through everything else — installing Nix, enabling flakes, direnv,
+the `@replaceme` rename, dependencies, Claude Code, and GitHub — one confirmed step at a time:
+
+```sh
+./scripts/setup.sh
+```
+
+Or do the bootstrap by hand:
 
 ```sh
 git submodule update --init --recursive # reference checkouts under .repos/, for agents
