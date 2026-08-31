@@ -213,6 +213,15 @@ locally is therefore slightly stricter than the sandbox. Add
 `preBuild = "pnpm exec effect-tsgo patch";` to a unit's `.nix` if you want parity — the patch is
 purely local file manipulation and is sandbox-safe.
 
+## Setup wizard as a readiness probe
+
+`scripts/setup.sh` is the human's guided first-time setup (README.md links it). For an agent it
+is a readiness probe: run `bash scripts/setup.sh </dev/null` and every prompt defaults to skip,
+so nothing is mutated and the output reports which stages are already satisfied, ending with a
+"still to do by hand" list. The stages that prompt interactively (installing Nix, shell hooks,
+account sign-ins) are privileged or account-bound: they belong to the human, who runs the wizard
+themselves — tell them to when a stage they need is unsatisfied.
+
 ## Agent configuration
 
 The dev shell's `shellHook` exports `CLAUDE_CONFIG_DIR="$PWD/.claude"` when entered from the
