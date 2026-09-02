@@ -4,14 +4,16 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
-    # Both of these ship their own nixpkgs; without `follows` the flake evaluates three
-    # separate trees, one of which lags the root input by months.
     llm-agents = {
       url = "github:numtide/llm-agents.nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     treefmt-nix = {
       url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    git-hooks-nix = {
+      url = "github:cachix/git-hooks.nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -22,6 +24,7 @@
       flake-parts,
       treefmt-nix,
       llm-agents,
+      git-hooks-nix,
       ...
     }:
     flake-parts.lib.mkFlake { inherit inputs; } {
@@ -32,6 +35,7 @@
       ];
       imports = [
         treefmt-nix.flakeModule
+        git-hooks-nix.flakeModule
         ./packages/core/core.nix
         ./apps/frontend/frontend.nix
       ];
@@ -122,6 +126,26 @@
               '';
             };
           };
+          pre-commit = {
+            check.enable = false;
+            settings.hooks = {
+              nix-fmt = {
+                enable = true;
+                name = "nix fmt";
+                entry = "nix fmt";
+                pass_filenames = false;
+                stages = [ "pre-commit" ];
+              };
+
+              flake-check = {
+                enable = true;
+                name = "nix flake check";
+                entry = "nix flake check";
+                pass_filenames = false;
+                stages = [ "pre-push" ];
+              };
+            };
+          };
           packages.toolchain = pkgs.buildEnv {
             name = "${projectName}-toolchain";
             paths = toolchainPackages;
@@ -135,6 +159,7 @@
             # entering the shell from a subdirectory does not scatter stray `.claude/`
             # directories around the tree.
             shellHook = ''
+              ${config.pre-commit.shellHook}
               if [ -f "$PWD/flake.nix" ]; then
                 export CLAUDE_CONFIG_DIR="$PWD/.claude"
                 mkdir -p "$CLAUDE_CONFIG_DIR"
