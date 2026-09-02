@@ -34,7 +34,6 @@
   - [x] `supabase` _(**TODO:** consider if necessary per project)_
   - [ ] Shadcn MCP **(?)** is a skill for now
 - [x] [OpenSpec][openspec] for tracking delta across product-based specifications
-- [ ] ~~[Superpowers][superpowers] for agentic workflow; potentially too heavy~~
 - [ ] E2E harnessing with LLM-run browser support; consider responsive layout and screenshotting automation
 - [x] Install hooks for static analysis checks; needs testing
 
@@ -62,12 +61,6 @@
 
 - [ ] Capture token usage metrics for feature building and compare against industry standard
 
-## Open Questions
-
-- How best to achieve OpenSpec + Superpowers combination?
-  - https://github.com/Fission-AI/OpenSpec/pull/970
-  - Can likely do better with DSPy
-
 [effect]: https://effect.website
 [lucide]: https://lucide.dev/
 [nix-flakes]: https://determinate.systems/blog/nix-flakes-explained/
@@ -77,7 +70,6 @@
 [react]: https://react.dev/
 [shadcn]: https://ui.shadcn.com/
 [supabase]: https://supabase.com/
-[superpowers]: https://github.com/obra/superpowers
 [tailwindcss]: https://tailwindcss.com/
 [treefmt-nix]: https://github.com/numtide/treefmt-nix
 [vitest]: https://vitest.dev/

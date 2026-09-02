@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # session-context.sh — SessionStart hook.
 #
-# Injects the boundary rules at the top of every session. This exists because
-# CLAUDE.md content can be lost or diluted after a compaction, and Superpowers
-# has a known post-compaction bootstrap loss. Re-injecting is cheap insurance.
+# Injects the workflow rule at the top of every session. This exists because
+# CLAUDE.md content can be lost or diluted after a compaction. Re-injecting
+# is cheap insurance.
 #
 # This is NOT enforcement — boundary-guard.sh is. This just means the model
 # knows the rule before it tries something the guard would block, which turns
@@ -14,7 +14,7 @@ cat <<'JSON'
 {
   "hookSpecificOutput": {
     "hookEventName": "SessionStart",
-    "additionalContext": "PROJECT WORKFLOW BOUNDARY: OpenSpec owns the workflow in this repo. Superpowers skills are available individually (brainstorming, test-driven-development, systematic-debugging, requesting-code-review) but must not be chained. Do not invoke writing-plans, executing-plans, or subagent-driven-development; a PreToolUse hook blocks them. Planning artifacts live only in openspec/changes/<name>/ - never docs/superpowers/. After the brainstorming skill's spec-review gate, stop and hand off to /opsx:continue rather than proceeding to its final step. /opsx:apply is the only executor."
+    "additionalContext": "PROJECT WORKFLOW: OpenSpec is the source of truth in this repo. Planning artifacts live only in openspec/changes/<name>/ - a PreToolUse hook denies plan or design writes anywhere else (docs/plans/, docs/specs/). Artifacts describe the work, not who runs it; never embed an executor directive. /opsx:apply is the only executor. Open an OpenSpec change only when asked to."
   }
 }
 JSON

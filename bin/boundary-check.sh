@@ -34,13 +34,13 @@ echo "--------------"
 if [ -x .claude/hooks/boundary-guard.sh ]; then
   ok "guard hook present and executable"
 else
-  bad "guard hook missing — enforcement is OFF; re-run install.sh"
+  bad "guard hook missing — enforcement is OFF; restore it from git"
 fi
 
 if grep -q "boundary-guard" .claude/settings.json 2>/dev/null; then
   ok "hook registered in .claude/settings.json"
 else
-  bad "hook NOT registered — it will never fire; re-run install.sh"
+  bad "hook NOT registered — it will never fire; restore .claude/settings.json from git"
 fi
 
 if [ -x bin/test-hooks.sh ] && [ -x .claude/hooks/boundary-guard.sh ]; then
@@ -58,7 +58,7 @@ else
 fi
 
 # --- 2. Pre-existing leaks the hook never saw -------------------------------
-for d in docs/superpowers/plans docs/superpowers/specs; do
+for d in docs/plans docs/specs; do
   if [ -d "$d" ] && [ -n "$(ls -A "$d" 2>/dev/null)" ]; then
     bad "$d/ has files — predates the hook, or arrived via merge"
     find "$d" -mindepth 1 -maxdepth 1 -exec printf '          %s\n' {} +
@@ -66,14 +66,6 @@ for d in docs/superpowers/plans docs/superpowers/specs; do
   fi
 done
 [ "$FAIL" -eq 1 ] || ok "no stray planning artifacts"
-
-HITS=$(grep -rl "REQUIRED SUB-SKILL" openspec/changes 2>/dev/null || true)
-if [ -n "$HITS" ]; then
-  bad "artifacts carry executor directives"
-  while IFS= read -r hit; do printf '          %s\n' "$hit"; done <<<"$HITS"
-else
-  ok "no executor directives in artifacts"
-fi
 
 # --- 3. Things no hook can judge --------------------------------------------
 if git rev-parse --git-dir >/dev/null 2>&1; then

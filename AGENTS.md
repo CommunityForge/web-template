@@ -264,69 +264,23 @@ exercises the guard in each mode.
 
 <!-- BEGIN openspec-boundary -->
 
-## Workflow boundary: OpenSpec owns this project
+## Workflow: OpenSpec is the source of truth
 
-OpenSpec and Superpowers are both installed. This section is context, not the enforcement
-mechanism: a PreToolUse hook at `.claude/hooks/boundary-guard.sh` blocks a violating tool call
-outright, and this text exists so the denial never surprises you. Open an OpenSpec change only
-when asked to.
-
-### The situation
-
-OpenSpec and Superpowers both define a complete idea-to-code chain, and they
-overlap exactly: both produce a design document, both produce a task list,
-both want to drive execution. Running both chains yields two sources of
-truth, and only OpenSpec's get synced into living specs and archived.
-
-So: OpenSpec is the workflow. Superpowers is a library you borrow from.
-
-### What the hook blocks, and why
-
-| Blocked                                                                                                    | Reason                                                        |
-| ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| Writes to `docs/superpowers/plans/` or `docs/superpowers/specs/`                                           | Duplicate artifacts OpenSpec never syncs or archives          |
-| Invoking `writing-plans`, `executing-plans` or `subagent-driven-development` (Skill tool or slash command) | Second orchestrator; the expensive execution path             |
-| `REQUIRED SUB-SKILL` text inside `openspec/changes/` files                                                 | Makes an artifact re-arm the sub-agent path in later sessions |
-
-Only actual invocations are inspected — mentioning those skill names in prose,
-docs, or a subagent prompt is not blocked.
-
-If you are blocked, the denial message names the correct alternative. Follow
-it rather than looking for a way around.
-
-### Where the chain gets cut
-
-The `brainstorming` skill's checklist ends with a user review gate on the
-written spec, then transitions to `writing-plans`. **Stop at the review
-gate.** Tell the user:
-
-> Design approved. Run `/opsx:continue` to generate the OpenSpec artifacts.
-
-Attempting the transition will be blocked by the hook, so stopping
-voluntarily is simply faster.
-
-### Superpowers skills that ARE welcome
-
-Invoke these when the user asks, by name or intent:
-
-- `brainstorming` — before `/opsx:propose` or `/opsx:continue`
-- `test-driven-development` — during `/opsx:apply`
-- `systematic-debugging` — when stuck on a defect
-- `requesting-code-review` — before `/opsx:archive`
-
-Each is a self-contained discipline that produces no competing artifact.
-
-### Artifact locations
+OpenSpec owns the idea-to-code chain in this project. Every planning artifact lives in
+`openspec/changes/<change-name>/` — those are the only planning documents that get synced into
+living specs and archived. Open an OpenSpec change only when asked to.
 
 - design → `openspec/changes/<change-name>/design.md`
 - plan → `openspec/changes/<change-name>/tasks.md`
 
-### Two operational notes
+Artifacts describe the work, not who runs it — never embed an executor directive in one.
+`/opsx:apply` is the only executor.
 
-`brainstorming` has a hard gate blocking implementation until a design is
-approved. During `/opsx:apply` that gate is already satisfied — the design
-was approved and written. Do not re-trigger it mid-apply.
+A PreToolUse hook at `.claude/hooks/boundary-guard.sh` enforces the artifact boundary: writing a
+plan or design document elsewhere (`docs/plans/`, `docs/specs/`), by file tool or shell
+redirection, is denied. The denial message names the correct location; follow it rather than
+looking for a way around.
 
-Before `/opsx:apply`, ask the user to clear context. Everything needed is on
-disk, and a large planning transcript is the main cause of slow apply runs.
+One operational note: before `/opsx:apply`, ask the user to clear context. Everything needed is
+on disk, and a large planning transcript is the main cause of slow apply runs.
 <!-- END openspec-boundary -->

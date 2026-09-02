@@ -12,10 +12,10 @@
 
 schema: guided
 context: |-
-  OpenSpec owns the workflow in this project. Superpowers skills may be used
-  individually but never chained. A PreToolUse hook blocks writes to
-  docs/superpowers/ and blocks writing-plans, executing-plans and
-  subagent-driven-development. The apply phase is the only executor.
+  OpenSpec is the source of truth for this project's workflow. Planning
+  artifacts live only in openspec/changes/<change-name>/; a PreToolUse hook
+  denies plan and design writes anywhere else. The apply phase is the only
+  executor.
 
-  Never embed a "REQUIRED SUB-SKILL" line or any other executor directive in
-  an artifact. Artifacts describe the work, not who runs it.
+  Never embed an executor directive in an artifact. Artifacts describe the
+  work, not who runs it.
