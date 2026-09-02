@@ -67,6 +67,10 @@
             pkgs.gnugrep
             pkgs.gnused
             pkgs.act
+            # `gh` backs Setup.command's GitHub stage (browser sign-in that also
+            # configures git's credential helper) and the wizard library's
+            # set_secret/set_var helpers.
+            pkgs.gh
             pkgs.oxfmt
             pkgs.oxlint
             pkgs.tsgolint

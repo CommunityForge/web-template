@@ -206,108 +206,67 @@ finish() {
 
 TOTAL_STAGES=10
 
-# Run from the repo root: every stage assumes flake.nix is in $PWD.
+# Double-clicked in Finder, the shell starts in $HOME — move to the directory
+# this script lives in (the repo root) before anything else.
+cd "$(dirname "$0")"
 if [[ ! -f flake.nix ]]; then
-  warn "Run this from the repository root (where flake.nix lives)."
+  warn "Setup.command must live in the repository root (where flake.nix lives)."
   exit 1
 fi
 
-# sed -i takes a mandatory '' argument on BSD/macOS and none on GNU.
-sed_inplace() {
-  if sed --version >/dev/null 2>&1; then sed -i "$@"; else sed -i '' "$@"; fi
-}
+banner "First-time setup (macOS)"
 
-banner "First-time setup"
-
-# ── Stage 1: platform ────────────────────────────────────────────────────
-# The wizard's own prerequisites are a Unix shell and git; everything else it
+# ── Stage 1: your Mac ────────────────────────────────────────────────────
+# The wizard's own prerequisites are macOS and git; everything else it
 # installs or guides. This stage verifies those two and stops with precise
 # instructions when they're missing, so every later stage can assume them.
-stage "Your platform"
-case "$(uname -s 2>/dev/null || echo unknown)" in
-  Darwin)
-    say "macOS detected — fully supported."
-    if ! command -v git >/dev/null 2>&1; then
-      warn "git is missing. Install Apple's command-line tools first:"
-      note "  xcode-select --install"
-      warn "When that finishes, re-run this wizard: ./scripts/setup.sh"
-      exit 0
-    fi
-    say "git is available. The wizard handles everything from here."
-    ;;
-  Linux)
-    if grep -qi microsoft /proc/version 2>/dev/null; then
-      say "Windows via WSL2 detected — supported, with two things worth checking."
-      if [[ -d /run/systemd/system ]]; then
-        say "systemd is enabled, so the Nix daemon can run."
-      else
-        warn "systemd is off in this WSL distro, and the Nix daemon needs it."
-        step "Add these two lines to /etc/wsl.conf (sudo needed):"
-        note "  [boot]"
-        note "  systemd=true"
-        step "Then from Windows PowerShell run: wsl --shutdown"
-        step "Reopen your WSL terminal and re-run this wizard: ./scripts/setup.sh"
-        exit 0
-      fi
-      if [[ $PWD == /mnt/* ]]; then
-        warn "This repo lives on the Windows drive (/mnt/...). Builds there are slow"
-        warn "and file watching is unreliable. Consider moving it into the Linux"
-        warn "filesystem first, e.g. ~/code/, and re-running from there."
-        pause "Press Enter to continue anyway (or Ctrl-C to move it first)."
-      fi
-    else
-      say "Linux detected — fully supported."
-    fi
-    if ! command -v git >/dev/null 2>&1; then
-      warn "git is missing. Install it with your package manager, e.g.:"
-      note "  sudo apt install git"
-      warn "Then re-run this wizard: ./scripts/setup.sh"
-      exit 0
-    fi
-    say "git is available. The wizard handles everything from here."
-    ;;
-  MINGW* | MSYS* | CYGWIN*)
-    warn "This looks like native Windows (Git Bash or similar). Nix cannot run"
-    warn "here — use WSL2, which gives you a real Linux environment inside Windows."
-    open_url "https://learn.microsoft.com/windows/wsl/install"
-    step "In PowerShell (as Administrator), run: wsl --install"
-    step "Reboot, open the Ubuntu app, and clone this repo INSIDE WSL (under ~/,"
-    step "not /mnt/c), since builds on the Windows drive are painfully slow."
-    step "Then run this wizard again from that WSL terminal."
-    exit 0
-    ;;
-  *)
-    warn "Unrecognized platform ($(uname -s 2>/dev/null || echo unknown))."
-    warn "macOS, Linux and Windows-via-WSL2 are the tested paths; continuing anyway."
-    ;;
-esac
+stage "Your Mac"
+if [[ "$(uname -s 2>/dev/null || echo unknown)" != Darwin ]]; then
+  warn "This wizard covers macOS only. Setup for Windows and Linux will ship"
+  warn "as a separate wizard."
+  exit 0
+fi
+say "macOS detected."
+if ! command -v git >/dev/null 2>&1; then
+  warn "git is missing. Install Apple's command-line tools first:"
+  note "  xcode-select --install"
+  warn "When that finishes, open Setup.command again."
+  exit 0
+fi
+say "git is available. The wizard handles everything from here."
 
 # ── Stage 2: Nix ───────────────────────────────────────────────────────────
-stage "Install Nix (multi-user)"
+stage "Install Nix"
+if ! command -v nix >/dev/null 2>&1; then
+  say "Nix is the only thing this project needs installed on your Mac, and"
+  say "Determinate Systems makes a normal Mac installer for it."
+  open_url "https://determinate.systems/install/"
+  step "On that page, download the macOS installer package."
+  step "Open the downloaded file and follow the installer to the end."
+  pause "When the installer says it's done, come back here and press Enter."
+  # The installer wires up NEW terminals; load Nix into this one too so the
+  # wizard can continue in the same window.
+  if [[ -e /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]]; then
+    set +u
+    # shellcheck disable=SC1091
+    . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh || true
+    set -u
+  fi
+fi
 if command -v nix >/dev/null 2>&1; then
-  say "Nix is already installed."
+  say "Nix is installed."
   if [[ -S /nix/var/nix/daemon-socket/socket ]]; then
-    say "The Nix daemon is running — this is the multi-user install this repo expects."
+    say "Its background service is running — the kind of install this repo expects."
   else
-    warn "Nix is installed but no daemon socket was found at /nix/var/nix/daemon-socket/socket."
+    warn "Nix is installed, but no daemon socket was found at /nix/var/nix/daemon-socket/socket."
     say "This repo's tracked agent sandbox config talks to the daemon socket, so a"
     say "single-user install will work for humans but not for sandboxed agents."
-    note "To switch, uninstall and re-run the multi-user installer."
+    note "To switch, uninstall and run the Determinate installer instead."
     pause
   fi
 else
-  say "Nix is the only host prerequisite. Install it with a daemon (multi-user)."
-  say "Use the Determinate Systems installer — it is the friendliest path: one"
-  say "command, flakes enabled out of the box, survives macOS upgrades, and it"
-  say "has a clean uninstall. It is also what this repo's CI uses."
-  open_url "https://github.com/DeterminateSystems/nix-installer"
-  step "Run the install command from that page; it looks like this:"
-  note "  curl -fsSL https://install.determinate.systems/nix | sh -s -- install"
-  note "(Prefer the standard installer instead? https://nixos.org/download —"
-  note " pick 'Multi-user installation'; the next stage helps you enable flakes.)"
-  step "When the installer finishes, open a NEW terminal so 'nix' is on your PATH."
-  warn "Then re-run this wizard from the new terminal: ./scripts/setup.sh"
-  say "It will pick up where you left off."
+  warn "Nix isn't visible in this window yet. Open a NEW terminal window, or"
+  warn "double-click Setup.command again — it picks up where you left off."
   exit 0
 fi
 
@@ -339,35 +298,27 @@ else
   fi
 fi
 
-# ── Stage 4: direnv (optional) ─────────────────────────────────────────────
-stage "direnv (optional, recommended)"
-say "direnv drops you into the dev shell automatically whenever you cd into"
-say "the repo. Without it you prefix every command with 'nix develop -c'."
-if command -v direnv >/dev/null 2>&1; then
-  say "direnv is already installed."
-  # 'allowed 0' is older direnv's enum for allowed; newer versions say 'true'.
-  if direnv status 2>/dev/null | grep -Eq 'Found RC allowed (0|true)'; then
-    say "This repo is already allowed — the dev shell loads when you cd in."
-  elif confirm "Run 'direnv allow' for this repo now?"; then
-    if direnv allow .; then
-      say "Allowed — the dev shell loads on your next cd into the repo."
-    else
-      warn "direnv allow didn't succeed; run it by hand from the repo root."
-    fi
+# ── Stage 4: toolchain ─────────────────────────────────────────────────────
+stage "Build the toolchain"
+say "Every tool this project uses (Node, pnpm, linters, Claude Code) comes"
+say "from Nix, pinned to exact versions. Building the toolchain once downloads"
+say "them all — and lets desktop and IDE Claude Code clients use those same"
+say "pinned tools when you open this folder."
+if [[ -e .devshell/bin ]]; then
+  say "The toolchain is already built — nothing to do."
+  note "(It survives flake bumps; rebuild with: nix build .#toolchain --out-link .devshell)"
+elif [[ -t 0 ]]; then
+  say "This is the big download — expect several minutes the first time."
+  if nix build .#toolchain --out-link .devshell; then
+    say "Toolchain built."
+  else
+    warn "The build didn't finish. Common causes: no network, or flakes not"
+    warn "enabled (previous stage). Fix the cause and open Setup.command again."
+    SKIPPED+=("nix build .#toolchain --out-link .devshell")
   fi
 else
-  if confirm "Install and set up direnv?"; then
-    open_url "https://direnv.net/docs/installation.html"
-    step "Install it (e.g. 'nix profile install nixpkgs#direnv' or your package"
-    step "manager), then hook it into your shell — for zsh, add to ~/.zshrc:"
-    # The hook line must reach ~/.zshrc verbatim, unexpanded.
-    # shellcheck disable=SC2016
-    note '  eval "$(direnv hook zsh)"'
-    step "Open a new terminal, cd back here, and run: direnv allow"
-    pause "Done (or noted for later)? Press Enter."
-  else
-    note "Fine — 'nix develop' gives you the same shell on demand."
-  fi
+  note "(Non-interactive run — skipping the build.)"
+  SKIPPED+=("nix build .#toolchain --out-link .devshell")
 fi
 
 # ── Stage 5: rename on fork (optional) ─────────────────────────────────────
@@ -386,9 +337,9 @@ if grep -q '"name": "@replaceme/monorepo"' package.json 2>/dev/null; then
     else
       say "Replacing @replaceme with @$NEW_SCOPE across the repo..."
       grep -rl '@replaceme' --exclude-dir={node_modules,.git,.direnv,dist,.repos,coverage} . |
-        while IFS= read -r f; do sed_inplace "s|@replaceme|@${NEW_SCOPE}|g" "$f"; done
+        while IFS= read -r f; do sed -i '' "s|@replaceme|@${NEW_SCOPE}|g" "$f"; done
       say "Setting projectName in flake.nix to \"$NEW_PROJECT\"..."
-      sed_inplace "s|projectName = \"replaceme\"|projectName = \"${NEW_PROJECT}\"|" flake.nix
+      sed -i '' "s|projectName = \"replaceme\"|projectName = \"${NEW_PROJECT}\"|" flake.nix
       say "Renamed. (Only the exact placeholder was touched — vendored docs that"
       say "merely contain the word 'replacement' are untouched.)"
     fi
@@ -418,7 +369,13 @@ if [[ -d .git ]]; then
   fi
 else
   say "No .git directory — you likely downloaded a ZIP."
-  if confirm "Initialize a fresh git repository and make an initial commit?"; then
+  say ""
+  say "If this project already lives on GitHub and you were invited to it, the"
+  say "GitHub stage at the end connects this folder to the team's shared history."
+  if confirm "Was this downloaded from a team project that is already on GitHub?"; then
+    git init >/dev/null
+    say "Version control started. The GitHub stage (last one) does the connecting."
+  elif confirm "Initialize a fresh git repository and make an initial commit?"; then
     git init
     git add -A
     git commit -m "Initial commit from template" >/dev/null
@@ -432,9 +389,8 @@ fi
 
 # ── Stage 7: dev shell + dependencies ──────────────────────────────────────
 stage "Build the dev shell and install dependencies"
-say "This is the big one: the first 'nix develop' downloads the whole pinned"
-say "toolchain (Node, pnpm, linters, Claude Code), then pnpm installs the"
-say "JavaScript dependencies. Expect several minutes on the first run."
+say "The first 'nix develop' assembles the dev shell (mostly cached already by"
+say "the toolchain build), then pnpm installs the JavaScript dependencies."
 # pnpm writes .modules.yaml on a successful install; its presence means this
 # machine has already been through this stage.
 if [[ -f node_modules/.modules.yaml ]]; then
@@ -459,7 +415,7 @@ if confirm "Run 'nix develop -c pnpm check' now?"; then
   if nix develop -c pnpm check; then
     say "Everything compiles. You're set up for development."
   else
-    warn "The check didn't pass. If you renamed the scope in stage 4, run"
+    warn "The check didn't pass. If you renamed the scope in stage 5, run"
     warn "'nix develop -c pnpm install' once more and retry; otherwise see AGENTS.md."
     SKIPPED+=("pnpm check (re-run after fixing the cause)")
   fi
@@ -467,41 +423,144 @@ else
   SKIPPED+=("pnpm check")
 fi
 
-# ── Stage 9: Claude Code ───────────────────────────────────────────────────
-stage "Claude Code setup"
-say "From a terminal: enter the dev shell (direnv, or 'nix develop') and run"
-say "'claude' from the repo root. The shell pins the Claude Code version and"
-say "keeps its config and session state inside ./.claude, which already tracks"
-say "the sandbox settings and hooks this repo relies on."
+# ── Stage 9: the Claude app ────────────────────────────────────────────────
+stage "The Claude app"
+say "This project is worked on inside the Claude desktop app: its Code tab is"
+say "where you open this folder and ask for changes in plain English."
 say ""
-say "Desktop and IDE clients don't inherit the dev shell, so their hooks would"
-say "run with the host's ancient bash and BSD tools. Building the toolchain"
-say "out-link at ./.devshell fixes that: hook scripts prefer it when present."
-if [[ -e .devshell/bin ]]; then
-  say "The .devshell out-link is already built — desktop and IDE clients are set."
-  note "(It survives flake bumps; rebuild with: nix build .#toolchain --out-link .devshell)"
-elif confirm "Build the toolchain out-link now (nix build .#toolchain --out-link .devshell)?"; then
-  if nix build .#toolchain --out-link .devshell; then
-    say "Built — GUI-launched Claude Code clients now use the pinned tools too."
-  else
-    warn "Build didn't finish; re-run the command above after fixing the cause."
-    SKIPPED+=("nix build .#toolchain --out-link .devshell")
-  fi
+# Probe the capability: the app bundle itself. The docs never name the bundle;
+# /Applications/Claude.app is what the installer creates today — re-verify on a
+# machine with the app if this probe ever misfires.
+if [[ -d "/Applications/Claude.app" ]]; then
+  say "The Claude app is already installed — nothing to download."
+elif [[ -t 0 ]]; then
+  say "It isn't installed yet. The download is a normal Mac installer."
+  open_url "https://claude.com/download"
+  step "Download the macOS version and open the downloaded file."
+  step "Drag Claude into the Applications folder, then open it from there."
+  step "Sign in with your Claude account (create one on the same screen if needed)."
+  pause "Press Enter once you're signed in."
 else
-  SKIPPED+=("Toolchain out-link for desktop/IDE Claude Code clients")
+  note "(Non-interactive run — skipping the guided install.)"
+  SKIPPED+=("Install the Claude app: https://claude.com/download")
 fi
-note "First launch of 'claude' will walk you through signing in — that part is"
-note "between you and Anthropic; no repo config is involved."
+say ""
+say "Inside the app, the tab you want is Code. It needs a paid Claude plan"
+say "(Pro, Max, Team, or Enterprise) — if the Code tab asks you to upgrade,"
+say "the plan is what's missing, not your setup."
+step "In the app: Code tab → open this project folder. That's the daily workflow."
+if [[ ! -e .devshell/bin ]]; then
+  warn "The toolchain isn't built yet (stage 4), so the app would fall back to"
+  warn "the Mac's own, much older tools. Re-run this wizard to build it first."
+fi
+note "Prefer a terminal? Run 'nix develop' from this folder, then 'claude' — that"
+note "shell pins the version and keeps config and session state inside ./.claude."
 
-# ── Stage 10: GitHub (optional) ────────────────────────────────────────────
+# ── Stage 10: GitHub ───────────────────────────────────────────────────────
 stage "GitHub"
-say "CI is GitHub Actions (.github/workflows/check.yml). It needs no secrets"
-say "or variables — it runs every Nix flake check automatically on push and PR."
-if git remote get-url origin >/dev/null 2>&1; then
-  say "A remote named 'origin' already exists: $(git remote get-url origin)"
+say "The project's home is a GitHub repository. This stage checks that you can"
+say "reach it and that pushing your work will just work."
+note "CI (.github/workflows/check.yml) needs no secrets — it runs on its own."
+
+# gh ships in the pinned toolchain (stage 4); prefer the out-link so this works
+# outside a dev shell, falling back to any gh already on PATH.
+_gh() {
+  if [[ -x .devshell/bin/gh ]]; then
+    .devshell/bin/gh "$@"
+  elif command -v gh >/dev/null 2>&1; then
+    gh "$@"
+  else
+    return 127
+  fi
+}
+
+# Reachability probe that never blocks on a credential or host-key prompt.
+_can_reach_origin() {
+  git remote get-url origin >/dev/null 2>&1 || return 1
+  GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND="ssh -o BatchMode=yes" \
+    git ls-remote --exit-code origin HEAD >/dev/null 2>&1
+}
+
+if _can_reach_origin; then
+  say "You can already reach the repository: $(git remote get-url origin)"
   note "Push when ready; the Check workflow runs on its own."
+elif [[ ! -t 0 ]]; then
+  note "(Non-interactive run — skipping the guided GitHub setup.)"
+  SKIPPED+=("GitHub access: sign in (.devshell/bin/gh auth login --web) and connect the folder")
 else
-  if confirm "Connect this repo to GitHub now?"; then
+  say ""
+  say "Three things make GitHub work: an account, an accepted invitation to the"
+  say "repository, and a one-time sign-in on this Mac so pushing is allowed."
+  say ""
+  if ! confirm "Do you already have a GitHub account?"; then
+    open_url "https://github.com/signup"
+    step "Create the account (a personal email is fine) and verify the email."
+    pause "Press Enter once the account exists."
+  fi
+  say "A private repository stays invisible until you accept the team's invitation."
+  open_url "https://github.com/notifications"
+  step "Accept the repository invitation there (it also arrives by email)."
+  pause "Press Enter once it's accepted (or if it already was)."
+  if ! _gh --version >/dev/null 2>&1; then
+    warn "The GitHub sign-in tool ships with the toolchain (stage 4), which isn't"
+    warn "built yet. Re-run this wizard to build it, then this stage finishes."
+    SKIPPED+=("GitHub sign-in (needs the stage-4 toolchain): .devshell/bin/gh auth login --web")
+  elif _gh auth status >/dev/null 2>&1; then
+    say "This Mac is already signed in to GitHub."
+  else
+    say "Now the one-time sign-in. A browser window opens — approve it there."
+    say "When it asks about authenticating Git, answer yes."
+    if _gh auth login --hostname github.com --web --git-protocol https; then
+      say "Signed in. Fetching and pushing use this sign-in automatically from now on."
+    else
+      warn "The sign-in didn't finish; re-run this wizard any time to retry."
+      SKIPPED+=("GitHub sign-in: .devshell/bin/gh auth login --web")
+    fi
+  fi
+  say ""
+  if git remote get-url origin >/dev/null 2>&1; then
+    say "This folder already points at $(git remote get-url origin)."
+    note "Push when ready; the Check workflow runs on its own."
+  elif [[ ! -d .git ]]; then
+    warn "This folder isn't under version control (the git stage was skipped), so"
+    warn "it can't be connected yet. Re-run the wizard and say yes at that stage."
+    SKIPPED+=("Connect the folder to GitHub (needs the git stage first)")
+  elif confirm "Was this folder downloaded from the team's repository (you were invited)?"; then
+    step "In the browser, open the repository page — the invitation email links to it."
+    step "Click the green 'Code' button and copy the HTTPS address shown."
+    ask GIT_REMOTE_URL "Paste the repository address:"
+    if [[ -n $GIT_REMOTE_URL ]]; then
+      git remote add origin "$GIT_REMOTE_URL"
+      if git fetch origin; then
+        _default_branch=$(git remote show origin 2>/dev/null | sed -n 's/.*HEAD branch: //p')
+        [[ -z $_default_branch ]] && _default_branch=main
+        if confirm "Link this folder to the team's shared history now? Your files stay as they are."; then
+          # Adopt in place: point HEAD at the team's branch, then a mixed reset —
+          # it moves the branch and index only and never touches working files.
+          git symbolic-ref HEAD "refs/heads/${_default_branch}"
+          git reset -q "origin/${_default_branch}"
+          git branch --set-upstream-to="origin/${_default_branch}" "$_default_branch" >/dev/null 2>&1 || true
+          if [[ -z $(git status --porcelain 2>/dev/null) ]]; then
+            say "Connected — this folder now matches the team's project exactly."
+          else
+            say "Connected. A few files differ from the team's copy; the Claude app"
+            say "can show you what's different before you share anything."
+          fi
+          note "(This wizard never pushes for you.)"
+        else
+          SKIPPED+=("Link the folder to the team's history (re-run this stage)")
+        fi
+      else
+        warn "Couldn't reach the repository. Usual causes: the invitation isn't"
+        warn "accepted yet, or the sign-in step above didn't finish."
+        git remote remove origin 2>/dev/null || true
+        SKIPPED+=("Connect the folder to GitHub (re-run this wizard after accepting the invite)")
+      fi
+    else
+      warn "No address given; re-run this wizard when you have it."
+      SKIPPED+=("Connect the folder to GitHub")
+    fi
+  elif confirm "Create a brand-new GitHub repository for this project instead?"; then
     open_url "https://github.com/new"
     step "Create an empty repository (no README, no license — this repo has files)."
     step "Copy its SSH or HTTPS URL from the 'Quick setup' box."

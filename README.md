@@ -31,28 +31,43 @@ typos — there is no `packageManager` field and no `.nvmrc`.
 
 The only host prerequisite is Nix itself, installed with a daemon — the tracked sandbox config in
 `.claude/settings.json` talks to the daemon socket. The
-[Determinate Systems installer](https://github.com/DeterminateSystems/nix-installer) is the
-recommended path: one command, flakes enabled out of the box, and a clean uninstall. Any other
+[Determinate Systems installer](https://determinate.systems/install/) is the
+recommended path: flakes enabled out of the box, and a clean uninstall. Any other
 multi-user install works too.
 From there, install Nix, clone, and point Claude Code at the repo root; an agent bootstraps
 through `nix develop -c` on its own.
 
-First-time humans can run the interactive setup wizard instead. Bring only a Unix shell and
-`git`: macOS Terminal and Linux qualify as-is, and on Windows use WSL2 (`wsl --install` from an
-Administrator PowerShell, then work inside the WSL filesystem, not `/mnt/c`). The wizard checks
-both prerequisites and walks through everything else — installing Nix, enabling flakes, direnv,
-the `@replaceme` rename, dependencies, Claude Code, and GitHub — one confirmed step at a time:
+### First-time setup (macOS)
 
-```sh
-./scripts/setup.sh
-```
+Never used a terminal? You don't need one to start.
+
+Joining a team project that already lives on GitHub? Three things happen in the browser
+before your Mac needs anything:
+
+1. Accept the repository invitation — it arrives by email and also waits at
+   [github.com/notifications](https://github.com/notifications). No GitHub account yet?
+   Create one at [github.com/signup](https://github.com/signup) first.
+2. On the repository page, click the green **Code** button and choose **Download ZIP**,
+   then unzip it somewhere like Documents.
+3. Day to day, the team works in the [Claude desktop app](https://claude.com/download) —
+   its **Code** tab (paid Claude plan required) is where you open the project folder and
+   ask for changes in plain English. The setup wizard below walks you through installing
+   it, so you can also leave this for later.
+
+Then find the file called `Setup.command` in the project folder and double-click it. A
+window opens and walks you through everything, one step at a time — it opens the right web
+pages, tells you exactly what to click, and always asks before changing anything. It ends
+by connecting the folder to the team's GitHub repository, including the one-time GitHub
+sign-in that lets you share your work. You can close it at any point and double-click it
+again later; it skips whatever is already done. If macOS warns that the file is from the
+internet, right-click it and choose Open instead. Setup for Windows and Linux will ship as
+a separate wizard.
 
 Or do the bootstrap by hand:
 
 ```sh
 git submodule update --init --recursive # reference checkouts under .repos/, for agents
-direnv allow                            # or: nix develop
-pnpm install
+nix develop -c pnpm install
 ```
 
 `.repos/` holds shallow read-only checkouts that coding agents consult as prior art. Nothing

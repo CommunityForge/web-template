@@ -10,6 +10,10 @@
   # shfmt de-indents `case` arms by default, which reads worse than the style already
   # used in `.claude/hooks/boundary-guard.sh`. `-ci` keeps them indented.
   settings.formatter.shfmt.options = [ "-ci" ];
+  # The shell modules only glob `*.sh`; the setup wizard is a double-clickable
+  # `.command`, so pull it in explicitly.
+  settings.formatter.shfmt.includes = [ "Setup.command" ];
+  settings.formatter.shellcheck.includes = [ "Setup.command" ];
   programs.oxfmt = {
     enable = true;
     package = pkgs.oxfmt;
