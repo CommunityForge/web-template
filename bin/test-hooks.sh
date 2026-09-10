@@ -19,13 +19,18 @@ GUARD="${1:-.claude/hooks/boundary-guard.sh}"
   echo "Not executable: $GUARD"
   exit 1
 }
+FRESH="${2:-.claude/hooks/fresh-session-guard.sh}"
+
+# Lets check() route through an interpreter when the exec bit is missing.
+fresh_guard() { bash "$FRESH"; }
 
 PASS=0
 FAIL=0
 
 # expect: "deny" or "allow". Deny is exit 0 plus a permissionDecision JSON
-# line on stdout; allow is exit 0 and silence. Exit 2 is the retired legacy
-# contract and always fails, as does any stray output on an allow.
+# line (PreToolUse) or a decision:block line (UserPromptSubmit) on stdout;
+# allow is exit 0 and silence. Exit 2 is the retired legacy contract and
+# always fails, as does any stray output on an allow.
 check() {
   local name="$1" expect="$2" payload="$3"
   local out rc got
@@ -35,7 +40,7 @@ check() {
     got="legacy-deny"
   elif [ "$rc" -ne 0 ]; then
     got="error"
-  elif printf '%s' "$out" | grep -qE '"permissionDecision"[[:space:]]*:[[:space:]]*"deny"'; then
+  elif printf '%s' "$out" | grep -qE '"permissionDecision"[[:space:]]*:[[:space:]]*"deny"|"decision"[[:space:]]*:[[:space:]]*"block"'; then
     got="deny"
   elif [ -z "$out" ]; then
     got="allow"
@@ -130,11 +135,88 @@ run_suite() {
   fi
 }
 
+run_fresh_suite() {
+  echo
+  echo "Fresh-session guard tests ($1)"
+  echo "-------------------------"
+
+  if [ ! -x "$FRESH" ]; then
+    printf '  \033[33mWARN\033[0m  %s lacks its exec bit — Claude Code will not run it (chmod +x). Testing via bash.\n' "$FRESH"
+  fi
+
+  local saved_guard="$GUARD"
+  GUARD=fresh_guard
+
+  # Fixtures go to the system temp dir, or the repo when that is unwritable
+  # (a sandboxed agent's shell allows the cwd but not /var/folders).
+  local tdir
+  tdir="$(mktemp -d 2>/dev/null)" || tdir="$(mktemp -d .fresh-guard-test.XXXXXX)"
+
+  # Transcripts where a proposal ran, one per way propose can appear.
+  printf '%s\n' \
+    '{"type":"user","content":"<command-name>/propose</command-name><command-args>add-todo</command-args>"}' \
+    >"$tdir/proposed-typed.jsonl"
+  printf '%s\n' \
+    '{"type":"assistant","content":[{"type":"tool_use","name":"Skill","input":{"skill":"opsx:propose"}}]}' \
+    >"$tdir/proposed-skill.jsonl"
+
+  # A clean transcript that MENTIONS /propose in prose (the session-context
+  # rule text does, every session) — evidence must mean invocation, not mention.
+  printf '%s\n' \
+    '{"type":"system","content":"When you are ready for the next one, start a new chat and use /propose."}' \
+    >"$tdir/clean.jsonl"
+
+  # --- must BLOCK -------------------------------------------------------------
+
+  check "typed /apply after typed /propose" deny \
+    "{\"hook_event_name\":\"UserPromptSubmit\",\"transcript_path\":\"$tdir/proposed-typed.jsonl\",\"prompt\":\"/apply add-todo\"}"
+
+  check "apply skill after typed /propose" deny \
+    "{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Skill\",\"transcript_path\":\"$tdir/proposed-typed.jsonl\",\"tool_input\":{\"skill\":\"apply\"}}"
+
+  check "opsx:apply skill after propose skill" deny \
+    "{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Skill\",\"transcript_path\":\"$tdir/proposed-skill.jsonl\",\"tool_input\":{\"skill\":\"opsx:apply\"}}"
+
+  check "openspec-apply-change skill after propose skill" deny \
+    "{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Skill\",\"transcript_path\":\"$tdir/proposed-skill.jsonl\",\"tool_input\":{\"skill\":\"openspec-apply-change\"}}"
+
+  check "/apply via SlashCommand after propose" deny \
+    "{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"SlashCommand\",\"transcript_path\":\"$tdir/proposed-typed.jsonl\",\"tool_input\":{\"command\":\"/apply add-todo\"}}"
+
+  # --- must ALLOW -------------------------------------------------------------
+
+  check "apply in a chat that never proposed" allow \
+    "{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Skill\",\"transcript_path\":\"$tdir/clean.jsonl\",\"tool_input\":{\"skill\":\"apply\"}}"
+
+  check "typed /apply in a clean chat" allow \
+    "{\"hook_event_name\":\"UserPromptSubmit\",\"transcript_path\":\"$tdir/clean.jsonl\",\"prompt\":\"/apply\"}"
+
+  check "propose again in the propose chat" allow \
+    "{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Skill\",\"transcript_path\":\"$tdir/proposed-typed.jsonl\",\"tool_input\":{\"skill\":\"propose\"}}"
+
+  check "archive after propose" allow \
+    "{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Skill\",\"transcript_path\":\"$tdir/proposed-typed.jsonl\",\"tool_input\":{\"skill\":\"archive\"}}"
+
+  check "prose mentioning /apply is not a command" allow \
+    "{\"hook_event_name\":\"UserPromptSubmit\",\"transcript_path\":\"$tdir/proposed-typed.jsonl\",\"prompt\":\"what does /apply do?\"}"
+
+  check "missing transcript fails open" allow \
+    '{"hook_event_name":"PreToolUse","tool_name":"Skill","transcript_path":"/nonexistent/t.jsonl","tool_input":{"skill":"apply"}}'
+
+  check "unparsable payload fails open" allow \
+    'not json at all'
+
+  rm -rf "$tdir"
+  GUARD="$saved_guard"
+}
+
 run_suite "host PATH"
+run_fresh_suite "host PATH"
 
 if [ -d "$PWD/.devshell/bin" ]; then
   export CLAUDE_PROJECT_DIR="$PWD"
   run_suite "pinned toolchain via .devshell"
+  run_fresh_suite "pinned toolchain via .devshell"
 else
   echo
   echo "  (no .devshell out-link; pinned-toolchain pass skipped)"

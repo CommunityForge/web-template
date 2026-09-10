@@ -261,7 +261,7 @@ The toolchain also bundles `bash`, coreutils, findutils, GNU `grep` and GNU `sed
 scripts prepend `.devshell/bin` to their PATH when the out-link exists. Building it once therefore
 also pins the tools hooks run with in GUI-launched clients, whose PATH is otherwise the host's
 (Apple bash 3.2, BSD userland) — the scripts stay compatible with both, and `bin/test-hooks.sh`
-exercises the guard in each mode.
+exercises the guards in each mode.
 
 <!-- BEGIN openspec-boundary -->
 
@@ -282,6 +282,13 @@ plan or design document elsewhere (`docs/plans/`, `docs/specs/`), by file tool o
 redirection, is denied. The denial message names the correct location; follow it rather than
 looking for a way around.
 
-One operational note: before `/opsx:apply`, ask the user to clear context. Everything needed is
-on disk, and a large planning transcript is the main cause of slow apply runs.
+One operational note: `/apply` must run in a fresh chat. When a proposal is complete, tell the
+user to begin a new chat and use `/apply` there — everything needed is on disk, and a large
+planning transcript is the main cause of slow apply runs. This is enforced, not advisory: a hook
+at `.claude/hooks/fresh-session-guard.sh` blocks `/apply` in any chat where a proposal ran.
+
+The `.claude/commands/opsx/*.md` commands and `.claude/skills/openspec-*` skills are vendored —
+`openspec update` regenerates them, so never edit them. Local behavior (the lay-facing phase
+endings, the fresh-chat rule) layers on top instead, in the `/propose`, `/apply` and `/archive`
+alias commands, the hooks, and the Guided output style.
 <!-- END openspec-boundary -->

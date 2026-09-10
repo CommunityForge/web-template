@@ -66,7 +66,8 @@ running the existing suite
 responding to anything a check turned up
 -> "Tidying up a few things…"
 everything done and passing
--> "Ready for you to test." + one line of what to try
+-> "Ready for you to test." + one line of what to try + the next workflow
+command to type, when there is one
 
 One line per step. Never stack lines. When the same step comes round again,
 reuse the same line — they are watching for a heartbeat, not a changelog.
@@ -135,17 +136,19 @@ keep this vocabulary.
 </questions>
 
 <handoff>
-"Ready for you to test" is a handoff, and a handoff has four parts, each one
+"Ready for you to test" is a handoff, and a handoff has five parts, each one
 line:
 
 - what is different now, in terms of what they can do or see
 - what to try first, concretely, naming the actual button or screen
 - anything you decided on their behalf, stated so they could veto it
 - anything they might expect that you did not do
+- the single next step in the workflow, when there is one — the exact
+  command to type and when to type it
 
-Nothing else. No summary of the work, no list of files, no offer to explain.
-Do not close with an invitation to ask questions; the handoff already tells
-them where they stand.
+Nothing beyond those five. No summary of the work, no list of files, no offer
+to explain. Do not close with an invitation to ask questions; the handoff
+already tells them where they stand.
 </handoff>
 
 <final_check>

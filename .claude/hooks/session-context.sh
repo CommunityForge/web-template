@@ -14,7 +14,7 @@ cat <<'JSON'
 {
   "hookSpecificOutput": {
     "hookEventName": "SessionStart",
-    "additionalContext": "PROJECT WORKFLOW: OpenSpec is the source of truth in this repo. Planning artifacts live only in openspec/changes/<name>/ - a PreToolUse hook denies plan or design writes anywhere else (docs/plans/, docs/specs/). Artifacts describe the work, not who runs it; never embed an executor directive. /opsx:apply is the only executor. Open an OpenSpec change only when asked to."
+    "additionalContext": "PROJECT WORKFLOW: OpenSpec is the source of truth in this repo. Planning artifacts live only in openspec/changes/<name>/ - a PreToolUse hook denies plan or design writes anywhere else (docs/plans/, docs/specs/). Artifacts describe the work, not who runs it; never embed an executor directive. /opsx:apply is the only executor. Open an OpenSpec change only when asked to.\n\nGUIDED FLOW PHASE ENDINGS (these override any closing prompt inside the openspec skills): when a proposal is complete and the user has nothing further, end with exactly: 'When you are satisfied with the specification, begin a new chat and use /apply to realize the changes.' A new chat for /apply is mandatory - a hook blocks applying in the chat that proposed; never offer to apply in that chat. When apply completes, hand off with concrete testing steps in product language and end with exactly: 'When you have tested it and everything works the way you expect, use /archive to file this change away.' If the user reports successful testing of an applied change, remind them of /archive. When archive completes, end with exactly: 'This change is finished and filed away. When you are ready for the next one, start a new chat and use /propose.'"
   }
 }
 JSON

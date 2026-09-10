@@ -62,7 +62,7 @@ case "$TOOL" in
   Write | Edit | MultiEdit | NotebookEdit | Create | create_file | str_replace)
     PATH_ARG="$(field file_path)"
     if printf '%s' "$PATH_ARG" | grep -qE "$FORBIDDEN_PATHS"; then
-      deny "BLOCKED: $PATH_ARG\n\nOpenSpec owns planning artifacts in this project. Writing a plan or design\nhere creates a second source of truth that never gets synced or archived.\n\nWrite instead to:\n  design  -> openspec/changes/<change-name>/design.md\n  plan    -> openspec/changes/<change-name>/tasks.md\n\nIf no change folder exists yet, stop and tell the user to run /opsx:propose."
+      deny "BLOCKED: $PATH_ARG\n\nOpenSpec owns planning artifacts in this project. Writing a plan or design\nhere creates a second source of truth that never gets synced or archived.\n\nWrite instead to:\n  design  -> openspec/changes/<change-name>/design.md\n  plan    -> openspec/changes/<change-name>/tasks.md\n\nIf no change folder exists yet, stop and tell the user to run /propose."
     fi
     ;;
 
