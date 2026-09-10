@@ -53,9 +53,9 @@ banner() {
   _clear
   printf '\n%s%s  %s%s\n' "$BOLD" "$BLUE" "$1" "$RESET"
   printf '%s  %s stages%s\n\n' "$DIM" "$TOTAL_STAGES" "$RESET"
-  printf '%s  You drive the browser; this wizard tells you exactly what to do and\n' "$DIM"
-  printf '  captures the values you copy back. Stop any time with Ctrl-C and re-run\n'
-  printf '  later, since it remembers values already saved.%s\n' "$RESET"
+  printf '%s  This wizard tells you exactly what to do and checks each step as you\n' "$DIM"
+  printf '  go. Close it any time with Ctrl-C and open it again later — it picks\n'
+  printf '  up where you left off.%s\n' "$RESET"
   pause "Ready to start?"
 }
 
@@ -74,6 +74,8 @@ say() { printf '  %s\n' "$1"; }
 step() { printf '  %s•%s %s\n' "$BLUE" "$RESET" "$1"; }
 note() { printf '  %s%s%s\n' "$DIM" "$1" "$RESET"; }
 warn() { printf '  %s⚠ %s%s\n' "$YELLOW" "$1" "$RESET"; }
+# ok "..." marks a step done or already satisfied.
+ok() { printf '  %s%s✓ %s%s\n' "$BOLD" "$GREEN" "$1" "$RESET"; }
 
 # open_url URL opens it in the human's browser, cross-platform incl. WSL.
 open_url() {
@@ -189,8 +191,8 @@ set_var() {
 finish() {
   _clear
   printf '\n%s%s  ✓ Setup complete%s\n' "$BOLD" "$GREEN" "$RESET"
-  ((${#WRITTEN_ENV[@]})) && note "wrote ${#WRITTEN_ENV[@]} value(s) to $ENV_FILE: ${WRITTEN_ENV[*]}"
-  ((${#WRITTEN_SECRET[@]})) && note "set ${#WRITTEN_SECRET[@]} GitHub secret(s): ${WRITTEN_SECRET[*]}"
+  ((${#WRITTEN_ENV[@]})) && ok "wrote ${#WRITTEN_ENV[@]} value(s) to $ENV_FILE: ${WRITTEN_ENV[*]}"
+  ((${#WRITTEN_SECRET[@]})) && ok "set ${#WRITTEN_SECRET[@]} GitHub secret(s): ${WRITTEN_SECRET[*]}"
   if ((${#SKIPPED[@]})); then
     printf '\n'
     warn "still to do by hand:"
@@ -228,12 +230,13 @@ if [[ "$(uname -s 2>/dev/null || echo unknown)" != Darwin ]]; then
 fi
 say "macOS detected."
 if ! command -v git >/dev/null 2>&1; then
-  warn "git is missing. Install Apple's command-line tools first:"
+  warn "One of Apple's developer tools is missing. Open the Terminal app, paste"
+  warn "this line, and press Enter — macOS shows an install window to click through:"
   note "  xcode-select --install"
-  warn "When that finishes, open Setup.command again."
+  warn "When it finishes, open Setup.command again."
   exit 0
 fi
-say "git is available. The wizard handles everything from here."
+ok "Everything this wizard needs is here. It handles the rest."
 
 # ── Stage 2: Nix ───────────────────────────────────────────────────────────
 stage "Install Nix"
@@ -254,173 +257,184 @@ if ! command -v nix >/dev/null 2>&1; then
   fi
 fi
 if command -v nix >/dev/null 2>&1; then
-  say "Nix is installed."
+  ok "Nix is installed."
   if [[ -S /nix/var/nix/daemon-socket/socket ]]; then
-    say "Its background service is running — the kind of install this repo expects."
+    say "It's set up the way this project expects."
   else
-    warn "Nix is installed, but no daemon socket was found at /nix/var/nix/daemon-socket/socket."
-    say "This repo's tracked agent sandbox config talks to the daemon socket, so a"
-    say "single-user install will work for humans but not for sandboxed agents."
-    note "To switch, uninstall and run the Determinate installer instead."
+    warn "Nix is installed, but in a way this project can't fully use — Claude's"
+    warn "automated helpers won't be able to build things on their own."
+    say "To fix it: uninstall Nix, then re-run this wizard and install it from"
+    say "the page it opens."
+    note "(Detail for a helper: no daemon socket at /nix/var/nix/daemon-socket/socket.)"
     pause
   fi
 else
-  warn "Nix isn't visible in this window yet. Open a NEW terminal window, or"
-  warn "double-click Setup.command again — it picks up where you left off."
+  warn "Nix isn't ready in this window yet. Double-click Setup.command again —"
+  warn "it picks up where you left off."
   exit 0
 fi
 
 # ── Stage 3: flakes ────────────────────────────────────────────────────────
-stage "Enable flakes"
+stage "Turn on a Nix setting"
 # Probe the capability, not the setting: Determinate Nix 3.x ships flakes as
 # stable, so 'experimental-features' reads empty there even though flakes work.
 _features=$(nix config show experimental-features 2>/dev/null ||
   nix show-config experimental-features 2>/dev/null || true)
 if nix eval --expr 'builtins ? getFlake' 2>/dev/null | grep -q '^true$'; then
-  say "Flakes already work on this install — nothing to enable."
+  ok "Nix is already set up the way this project needs — nothing to change."
 elif [[ $_features == *flakes* && $_features == *nix-command* ]]; then
-  say "Flakes and the unified 'nix' command are already enabled."
+  ok "Nix is already set up the way this project needs — nothing to change."
 else
-  say "This repo is a flake, so Nix needs 'experimental-features = nix-command flakes'."
-  if confirm "Add that line to ~/.config/nix/nix.conf now?"; then
+  say "Nix needs one settings line turned on before it can build this project."
+  note "(The line: 'experimental-features = nix-command flakes' in ~/.config/nix/nix.conf)"
+  if confirm "Add that settings line now?"; then
     mkdir -p "$HOME/.config/nix"
     touch "$HOME/.config/nix/nix.conf"
     if grep -q '^experimental-features' "$HOME/.config/nix/nix.conf"; then
-      warn "Your ~/.config/nix/nix.conf already sets experimental-features; edit it by hand to include: nix-command flakes"
+      warn "Your Nix settings file already has a line this wizard won't overwrite."
+      warn "Ask for help adding 'nix-command flakes' to it, or edit it yourself:"
+      note "  ~/.config/nix/nix.conf"
       pause
     else
       printf 'experimental-features = nix-command flakes\n' >>"$HOME/.config/nix/nix.conf"
-      say "Enabled in ~/.config/nix/nix.conf."
+      ok "Done — the setting is on."
     fi
   else
     SKIPPED+=("Enable flakes: add 'experimental-features = nix-command flakes' to ~/.config/nix/nix.conf")
-    warn "Skipped — later stages will fail until flakes are enabled."
+    warn "Skipped — the next stages can't work until this is done."
   fi
 fi
 
 # ── Stage 4: toolchain ─────────────────────────────────────────────────────
-stage "Build the toolchain"
-say "Every tool this project uses (Node, pnpm, linters, Claude Code) comes"
-say "from Nix, pinned to exact versions. Building the toolchain once downloads"
-say "them all — and lets desktop and IDE Claude Code clients use those same"
-say "pinned tools when you open this folder."
+stage "Download the project's tools"
+say "Everything this project uses — including Claude Code — comes as one"
+say "download, so every machine gets the exact same versions. The Claude app"
+say "uses these same tools when you open this folder."
 if [[ -e .devshell/bin ]]; then
-  say "The toolchain is already built — nothing to do."
-  note "(It survives flake bumps; rebuild with: nix build .#toolchain --out-link .devshell)"
+  ok "The tools are already downloaded — nothing to do."
+  note "(If they ever need refreshing: nix build .#toolchain --out-link .devshell)"
 elif [[ -t 0 ]]; then
   say "This is the big download — expect several minutes the first time."
   if nix build .#toolchain --out-link .devshell; then
-    say "Toolchain built."
+    ok "Tools downloaded."
   else
-    warn "The build didn't finish. Common causes: no network, or flakes not"
-    warn "enabled (previous stage). Fix the cause and open Setup.command again."
+    warn "The download didn't finish. The usual causes: no internet connection,"
+    warn "or the previous stage being skipped. Fix that and open Setup.command again."
     SKIPPED+=("nix build .#toolchain --out-link .devshell")
   fi
 else
-  note "(Non-interactive run — skipping the build.)"
+  note "(Non-interactive run — skipping the download.)"
   SKIPPED+=("nix build .#toolchain --out-link .devshell")
 fi
 
 # ── Stage 5: rename on fork (optional) ─────────────────────────────────────
-stage "Make it yours: rename @replaceme"
-say "The npm scope is the literal placeholder '@replaceme', and the Nix"
-say "derivations are named 'replaceme'. Skip this if you're only evaluating."
+stage "Make it yours: rename the project"
+say "The project still carries its placeholder name, 'replaceme'. Give it your"
+say "own name now, or skip this if you're only trying things out."
 if grep -q '"name": "@replaceme/monorepo"' package.json 2>/dev/null; then
   if confirm "Rename the project now?"; then
-    ask NEW_SCOPE "New npm scope (without the @, e.g. 'myorg'):"
+    ask NEW_SCOPE "Your organization's short name (lowercase, no spaces — e.g. myorg):"
     NEW_SCOPE=${NEW_SCOPE#@}
-    ask NEW_PROJECT "Nix project name [default: $NEW_SCOPE]:"
+    ask NEW_PROJECT "A name for the project itself [press Enter to use the same name]:"
     [[ -z $NEW_PROJECT ]] && NEW_PROJECT="$NEW_SCOPE"
     if [[ -z $NEW_SCOPE ]]; then
-      warn "Empty scope — skipping the rename."
+      warn "No name given — skipping the rename."
       SKIPPED+=("Rename @replaceme (see README.md for the two manual steps)")
     else
-      say "Replacing @replaceme with @$NEW_SCOPE across the repo..."
+      say "Renaming..."
       grep -rl '@replaceme' --exclude-dir={node_modules,.git,.direnv,dist,.repos,coverage} . |
         while IFS= read -r f; do sed -i '' "s|@replaceme|@${NEW_SCOPE}|g" "$f"; done
-      say "Setting projectName in flake.nix to \"$NEW_PROJECT\"..."
       sed -i '' "s|projectName = \"replaceme\"|projectName = \"${NEW_PROJECT}\"|" flake.nix
-      say "Renamed. (Only the exact placeholder was touched — vendored docs that"
-      say "merely contain the word 'replacement' are untouched.)"
+      ok "Renamed."
     fi
   else
     SKIPPED+=("Rename @replaceme (see README.md for the two manual steps)")
   fi
 else
-  say "Already renamed — nothing to do."
+  ok "Already renamed — nothing to do."
 fi
 
 # ── Stage 6: git history + reference checkouts (optional) ──────────────────
-stage "Git repo and reference checkouts"
+stage "Keep a history of changes"
 if [[ -d .git ]]; then
-  say "This is already a git repository."
+  ok "This folder already keeps a history of its changes."
   if git config --file .gitmodules --get-regexp path >/dev/null 2>&1 &&
     git ls-files --stage .repos 2>/dev/null | grep -q '^160000'; then
     say ""
-    say ".repos/ holds shallow read-only checkouts coding agents consult as prior"
-    say "art. Nothing in the build needs them; they are a download you can skip."
+    say ".repos/ holds copies of other projects that Claude reads for reference."
+    say "Nothing needs them to build — they're an optional download."
     if ! git submodule status 2>/dev/null | grep -q '^-'; then
-      say "They are already fetched — nothing to do."
-    elif confirm "Fetch them now (git submodule update --init --recursive)?"; then
-      git submodule update --init --recursive || warn "Submodule fetch had trouble; you can re-run it any time."
+      ok "They're already downloaded — nothing to do."
+    elif confirm "Download them now?"; then
+      note "(Runs: git submodule update --init --recursive)"
+      git submodule update --init --recursive || warn "The download had trouble; re-run this wizard any time to try again."
     else
-      note "Skip is fine — re-run the command above whenever you want them."
+      note "Skip is fine — re-run this wizard whenever you want them."
     fi
   fi
 else
-  say "No .git directory — you likely downloaded a ZIP."
+  say "This folder doesn't keep a history of changes yet — it looks like it"
+  say "arrived as a ZIP download."
   say ""
   say "If this project already lives on GitHub and you were invited to it, the"
   say "GitHub stage at the end connects this folder to the team's shared history."
   if confirm "Was this downloaded from a team project that is already on GitHub?"; then
     git init >/dev/null
-    say "Version control started. The GitHub stage (last one) does the connecting."
-  elif confirm "Initialize a fresh git repository and make an initial commit?"; then
-    git init
+    ok "History tracking started. The GitHub stage (last one) does the connecting."
+  elif confirm "Start keeping a history of changes now? (Recommended — it's how work gets shared and undone safely.)"; then
+    git init >/dev/null
     git add -A
     git commit -m "Initial commit from template" >/dev/null
-    say "Initialized on branch $(git branch --show-current)."
-    note "ZIPs don't carry submodules; if you want the .repos/ reference checkouts,"
-    note "see .gitmodules for the two URLs and clone them shallowly by hand."
+    ok "Done — this folder now keeps its history."
+    note "ZIP downloads don't include the .repos/ reference copies; a teammate can"
+    note "fetch them later if needed (the two addresses are listed in .gitmodules)."
   else
-    SKIPPED+=("git init (version control is strongly recommended)")
+    SKIPPED+=("Start keeping a history of changes: git init (strongly recommended)")
   fi
 fi
 
 # ── Stage 7: dev shell + dependencies ──────────────────────────────────────
-stage "Build the dev shell and install dependencies"
-say "The first 'nix develop' assembles the dev shell (mostly cached already by"
-say "the toolchain build), then pnpm installs the JavaScript dependencies."
+stage "Install the project's building blocks"
+say "Next, the project downloads the pieces it's built from. Most of it is"
+say "already on your Mac from the tools download, so this is quicker."
 # pnpm writes .modules.yaml on a successful install; its presence means this
 # machine has already been through this stage.
 if [[ -f node_modules/.modules.yaml ]]; then
-  say "Dependencies are already installed — nothing to do."
-  note "(After editing manifests or catalogs, re-run: nix develop -c pnpm install)"
-elif confirm "Run 'nix develop -c pnpm install' now?"; then
+  ok "Already installed — nothing to do."
+  note "(If the project's ingredient lists change later, re-run: nix develop -c pnpm install)"
+elif [[ -t 0 ]]; then
+  say "Installing now — this can take a few minutes."
+  note "(Runs: nix develop -c pnpm install)"
   if nix develop -c pnpm install; then
-    say "Toolchain built and dependencies installed."
+    ok "Building blocks installed."
   else
-    warn "That didn't finish cleanly. Common causes: flakes not enabled (stage 2),"
-    warn "or no network. Fix the cause and re-run this wizard — it will skip ahead."
+    warn "That didn't finish. The usual causes: the Nix setting from stage 3 being"
+    warn "skipped, or no internet. Fix that and open this wizard again — it skips"
+    warn "what's already done."
     SKIPPED+=("nix develop -c pnpm install")
   fi
 else
+  note "(Non-interactive run — skipping the install.)"
   SKIPPED+=("nix develop -c pnpm install")
 fi
 
 # ── Stage 8: smoke check ───────────────────────────────────────────────────
-stage "Smoke check"
-say "A quick type-check proves the whole graph compiles on your machine."
-if confirm "Run 'nix develop -c pnpm check' now?"; then
+stage "Quick health check"
+say "A quick check confirms everything on your Mac fits together."
+if [[ -t 0 ]]; then
+  say "Checking now — a minute or two."
+  note "(Runs: nix develop -c pnpm check)"
   if nix develop -c pnpm check; then
-    say "Everything compiles. You're set up for development."
+    ok "Everything checks out. Your Mac is ready."
   else
-    warn "The check didn't pass. If you renamed the scope in stage 5, run"
-    warn "'nix develop -c pnpm install' once more and retry; otherwise see AGENTS.md."
-    SKIPPED+=("pnpm check (re-run after fixing the cause)")
+    warn "The check found problems. If you renamed the project in stage 5, the"
+    warn "install needs one more pass — open the Claude app and ask it to reinstall"
+    warn "and re-check, or show this to a teammate."
+    SKIPPED+=("Health check (nix develop -c pnpm install, then nix develop -c pnpm check)")
   fi
 else
-  SKIPPED+=("pnpm check")
+  note "(Non-interactive run — skipping the check.)"
+  SKIPPED+=("nix develop -c pnpm check")
 fi
 
 # ── Stage 9: the Claude app ────────────────────────────────────────────────
@@ -432,7 +446,7 @@ say ""
 # /Applications/Claude.app is what the installer creates today — re-verify on a
 # machine with the app if this probe ever misfires.
 if [[ -d "/Applications/Claude.app" ]]; then
-  say "The Claude app is already installed — nothing to download."
+  ok "The Claude app is already installed — nothing to download."
 elif [[ -t 0 ]]; then
   say "It isn't installed yet. The download is a normal Mac installer."
   open_url "https://claude.com/download"
@@ -450,17 +464,16 @@ say "(Pro, Max, Team, or Enterprise) — if the Code tab asks you to upgrade,"
 say "the plan is what's missing, not your setup."
 step "In the app: Code tab → open this project folder. That's the daily workflow."
 if [[ ! -e .devshell/bin ]]; then
-  warn "The toolchain isn't built yet (stage 4), so the app would fall back to"
-  warn "the Mac's own, much older tools. Re-run this wizard to build it first."
+  warn "The tools download (stage 4) hasn't happened yet, so the Claude app would"
+  warn "be working with the Mac's own, much older tools. Re-run this wizard to"
+  warn "finish that first."
 fi
-note "Prefer a terminal? Run 'nix develop' from this folder, then 'claude' — that"
-note "shell pins the version and keeps config and session state inside ./.claude."
 
 # ── Stage 10: GitHub ───────────────────────────────────────────────────────
 stage "GitHub"
 say "The project's home is a GitHub repository. This stage checks that you can"
-say "reach it and that pushing your work will just work."
-note "CI (.github/workflows/check.yml) needs no secrets — it runs on its own."
+say "reach it and that sharing your work with the team will just work."
+note "GitHub runs the project's checks automatically — nothing to set up for that."
 
 # gh ships in the pinned toolchain (stage 4); prefer the out-link so this works
 # outside a dev shell, falling back to any gh already on PATH.
@@ -482,15 +495,15 @@ _can_reach_origin() {
 }
 
 if _can_reach_origin; then
-  say "You can already reach the repository: $(git remote get-url origin)"
-  note "Push when ready; the Check workflow runs on its own."
+  ok "You can already reach the repository: $(git remote get-url origin)"
+  note "When you share work, GitHub checks it automatically."
 elif [[ ! -t 0 ]]; then
   note "(Non-interactive run — skipping the guided GitHub setup.)"
   SKIPPED+=("GitHub access: sign in (.devshell/bin/gh auth login --web) and connect the folder")
 else
   say ""
   say "Three things make GitHub work: an account, an accepted invitation to the"
-  say "repository, and a one-time sign-in on this Mac so pushing is allowed."
+  say "repository, and a one-time sign-in so this Mac is allowed to send work up."
   say ""
   if ! confirm "Do you already have a GitHub account?"; then
     open_url "https://github.com/signup"
@@ -502,16 +515,16 @@ else
   step "Accept the repository invitation there (it also arrives by email)."
   pause "Press Enter once it's accepted (or if it already was)."
   if ! _gh --version >/dev/null 2>&1; then
-    warn "The GitHub sign-in tool ships with the toolchain (stage 4), which isn't"
-    warn "built yet. Re-run this wizard to build it, then this stage finishes."
-    SKIPPED+=("GitHub sign-in (needs the stage-4 toolchain): .devshell/bin/gh auth login --web")
+    warn "The GitHub sign-in tool comes with the tools download (stage 4), which"
+    warn "isn't done yet. Re-run this wizard to finish it, then this stage completes."
+    SKIPPED+=("GitHub sign-in (needs the stage-4 tools): .devshell/bin/gh auth login --web")
   elif _gh auth status >/dev/null 2>&1; then
-    say "This Mac is already signed in to GitHub."
+    ok "This Mac is already signed in to GitHub."
   else
     say "Now the one-time sign-in. A browser window opens — approve it there."
     say "When it asks about authenticating Git, answer yes."
     if _gh auth login --hostname github.com --web --git-protocol https; then
-      say "Signed in. Fetching and pushing use this sign-in automatically from now on."
+      ok "Signed in. From now on this Mac can send and receive the project automatically."
     else
       warn "The sign-in didn't finish; re-run this wizard any time to retry."
       SKIPPED+=("GitHub sign-in: .devshell/bin/gh auth login --web")
@@ -519,15 +532,15 @@ else
   fi
   say ""
   if git remote get-url origin >/dev/null 2>&1; then
-    say "This folder already points at $(git remote get-url origin)."
-    note "Push when ready; the Check workflow runs on its own."
+    ok "This folder already points at $(git remote get-url origin)."
+    note "When you share work, GitHub checks it automatically."
   elif [[ ! -d .git ]]; then
-    warn "This folder isn't under version control (the git stage was skipped), so"
-    warn "it can't be connected yet. Re-run the wizard and say yes at that stage."
+    warn "This folder isn't keeping a history of changes yet (that stage was"
+    warn "skipped), so it can't be connected. Re-run the wizard and say yes there."
     SKIPPED+=("Connect the folder to GitHub (needs the git stage first)")
   elif confirm "Was this folder downloaded from the team's repository (you were invited)?"; then
     step "In the browser, open the repository page — the invitation email links to it."
-    step "Click the green 'Code' button and copy the HTTPS address shown."
+    step "Click the green 'Code' button and copy the web address it shows (the one starting with https)."
     ask GIT_REMOTE_URL "Paste the repository address:"
     if [[ -n $GIT_REMOTE_URL ]]; then
       git remote add origin "$GIT_REMOTE_URL"
@@ -541,9 +554,9 @@ else
           git reset -q "origin/${_default_branch}"
           git branch --set-upstream-to="origin/${_default_branch}" "$_default_branch" >/dev/null 2>&1 || true
           if [[ -z $(git status --porcelain 2>/dev/null) ]]; then
-            say "Connected — this folder now matches the team's project exactly."
+            ok "Connected — this folder now matches the team's project exactly."
           else
-            say "Connected. A few files differ from the team's copy; the Claude app"
+            ok "Connected. A few files differ from the team's copy; the Claude app"
             say "can show you what's different before you share anything."
           fi
           note "(This wizard never pushes for you.)"
@@ -562,23 +575,23 @@ else
     fi
   elif confirm "Create a brand-new GitHub repository for this project instead?"; then
     open_url "https://github.com/new"
-    step "Create an empty repository (no README, no license — this repo has files)."
-    step "Copy its SSH or HTTPS URL from the 'Quick setup' box."
-    ask GIT_REMOTE_URL "Paste the repository URL:"
+    step "Create an empty repository (no README, no license — this project already has files)."
+    step "Copy the web address shown in the 'Quick setup' box."
+    ask GIT_REMOTE_URL "Paste the repository address:"
     if [[ -n $GIT_REMOTE_URL ]]; then
       git remote add origin "$GIT_REMOTE_URL"
-      say "Remote 'origin' added."
-      step "Push yourself when ready: git push -u origin main"
+      ok "Connected to your new repository."
+      step "When you're ready to send your work up, ask Claude — or run: git push -u origin main"
       note "(This wizard never pushes for you.)"
     else
-      warn "No URL given; add it later with: git remote add origin <url>"
-      SKIPPED+=("git remote add origin <url>")
+      warn "No address given; re-run this wizard when you have it."
+      SKIPPED+=("Connect the folder to GitHub: git remote add origin <url>")
     fi
   else
-    SKIPPED+=("GitHub remote (git remote add origin <url>, then push)")
+    SKIPPED+=("Connect the folder to GitHub (git remote add origin <url>, then push)")
   fi
 fi
 
 finish
-note "Day-to-day commands: pnpm check / test / lint / build, nix fmt, nix flake check."
-note "AGENTS.md is the full reference — read it before changing anything structural."
+note "For developers: day-to-day commands are pnpm check / test / lint / build, nix fmt, nix flake check."
+note "AGENTS.md is the full technical reference."
