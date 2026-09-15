@@ -225,6 +225,12 @@ sign-in), and on Windows also the WSL/Ubuntu/Nix installs and the copy of the pr
 distro — so nothing is mutated and the output reports which stages are already satisfied,
 ending with a "still to do by hand" list of runnable commands.
 
+The skip-and-report list is the non-interactive contract only. Run interactively, `Setup.ps1`
+stops loudly at the first stage that fails (exit 1) — every stage depends on its predecessors,
+so continuing would only cascade one failure into many. The one exception is the health check,
+whose remedy is the Claude app that a later stage installs. `Setup.command` still records and
+continues; port the fail-fast behavior if that ever grates.
+
 Probe invocations:
 
 - macOS: `bash Setup.command </dev/null`

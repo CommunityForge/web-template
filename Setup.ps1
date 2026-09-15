@@ -43,6 +43,7 @@ if ($script:Pretty) {
   $script:BLUE = "$esc[34m"
   $script:GREEN = "$esc[32m"
   $script:YELLOW = "$esc[33m"
+  $script:RED = "$esc[31m"
 } else {
   $script:BOLD = ''
   $script:DIM = ''
@@ -50,6 +51,7 @@ if ($script:Pretty) {
   $script:BLUE = ''
   $script:GREEN = ''
   $script:YELLOW = ''
+  $script:RED = ''
 }
 
 # Author sets this at the top of the stages section.
@@ -158,6 +160,22 @@ function ask {
   if (-not $script:Interactive) { return '' }
   Write-Host -NoNewline ("  $($script:BOLD)$Prompt$($script:RESET) ")
   return Read-Host
+}
+
+# fail_stage stops the wizard loudly at the stage that broke. Every stage here
+# depends on the ones before it (WSL -> Ubuntu -> Nix -> copy -> tools ->
+# install), so continuing past a failure only turns one problem into a page of
+# them. PowerShell-library addition: Setup.command records and continues
+# instead. Interactive runs only — a non-interactive probe never mutates, so
+# it never fails; it reports via SKIPPED and finish.
+function fail_stage {
+  param([string]$What)
+  Write-Host ''
+  Write-Host ("  $($script:BOLD)$($script:RED)✗ Setup stopped here: $What$($script:RESET)")
+  say 'Nothing after this point was attempted. Once the message above is'
+  say 'sorted out, double-click Setup.cmd again — it skips everything already'
+  say 'done and resumes at this stage.'
+  exit 1
 }
 
 # ConvertTo-BashSingleQuoted makes a value safe to splice into a bash script
@@ -298,23 +316,25 @@ if ($LASTEXITCODE -eq 0) {
   ok 'The Linux layer is already turned on — nothing to do.'
 } elseif ($script:Interactive) {
   say 'Windows asks for permission once — approve the prompt that appears.'
+  $elevated = $null
   try {
-    Start-Process -FilePath 'powershell' -Verb RunAs -Wait -ArgumentList '-NoProfile', '-Command', 'wsl --install --no-distribution'
+    $elevated = Start-Process -FilePath 'powershell' -Verb RunAs -Wait -PassThru -ArgumentList '-NoProfile', '-Command', 'wsl --install --no-distribution'
   } catch {
-    warn "That permission prompt was closed without approving, so nothing changed."
-    say 'Double-click Setup.cmd again any time to retry.'
+    warn 'That permission prompt was closed without approving, so nothing changed.'
+    fail_stage 'Windows did not get permission to turn on its Linux layer'
   }
-  # Recent Windows 11 builds sometimes finish without needing a restart, so
-  # re-probe before asking for one.
-  $null = Invoke-Native { & wsl.exe --status 2>&1 }
-  if ($LASTEXITCODE -eq 0) {
-    ok 'The Linux layer is on.'
-  } else {
-    warn 'Windows needs a restart to finish turning this on.'
-    say 'Restart your PC, then double-click Setup.cmd again — it picks up'
-    say 'where it left off.'
-    exit 0
+  if ($elevated.ExitCode -ne 0) {
+    warn 'Windows reported a problem turning on its Linux layer; the window that'
+    warn 'just closed had the details.'
+    fail_stage 'the Linux layer did not turn on'
   }
+  # wsl --status starts answering before the virtual machine layer is actually
+  # live, so a "no restart needed" probe here reports ready when it isn't.
+  # A restart is the only reliable way to finish this stage.
+  warn 'Windows needs a restart to finish turning this on.'
+  say 'Restart your PC, then double-click Setup.cmd again — it picks up'
+  say 'where it left off.'
+  exit 0
 } else {
   note '(Non-interactive run — skipping the Windows feature change.)'
   $script:SKIPPED += 'Turn on WSL: wsl --install --no-distribution (as administrator, then restart)'
@@ -351,8 +371,8 @@ if (-not $provisioned) {
     $provisioned = ($script:UbuntuExit -eq 0 -and $who -ne '' -and $who -ne 'root')
     if (-not $provisioned) {
       warn "Ubuntu isn't finished setting up yet. If it asked you to restart,"
-      warn 'do that; then double-click Setup.cmd again — it picks up here.'
-      $script:SKIPPED += 'Install Ubuntu: wsl --install -d Ubuntu (then create the username it asks for)'
+      warn 'do that first; otherwise finish creating the username it asked for.'
+      fail_stage 'Ubuntu is not set up yet'
     }
   } else {
     note '(Non-interactive run — skipping the Ubuntu install.)'
@@ -378,19 +398,20 @@ printf '[boot]\nsystemd=true\n' | sudo tee -a /etc/wsl.conf >/dev/null
         warn "Ubuntu's settings file already has a section this wizard won't touch."
         warn 'Ask for help turning systemd on in it.'
         note '(Detail for a helper: /etc/wsl.conf has a [boot] section without systemd=true.)'
-        $script:SKIPPED += 'Enable systemd in Ubuntu: add systemd=true under [boot] in /etc/wsl.conf, then wsl --shutdown'
+        fail_stage 'a Ubuntu setting needs a hand-edit'
       } elseif ($script:UbuntuExit -eq 0) {
         Invoke-Native { & wsl.exe --shutdown }
         $initComm = (Invoke-Ubuntu -Capture 'ps -p 1 -o comm=').Trim()
         if ($initComm -eq 'systemd') {
           ok 'The setting is on.'
         } else {
-          warn "The setting didn't take. Double-click Setup.cmd again to retry."
-          $script:SKIPPED += 'Enable systemd in Ubuntu: add systemd=true under [boot] in /etc/wsl.conf, then wsl --shutdown'
+          warn "The setting didn't take."
+          note '(Detail for a helper: systemd=true is in /etc/wsl.conf but pid 1 is not systemd after wsl --shutdown.)'
+          fail_stage 'a Ubuntu setting did not turn on'
         }
       } else {
         warn "That didn't finish (the password prompt may have been dismissed)."
-        $script:SKIPPED += 'Enable systemd in Ubuntu: add systemd=true under [boot] in /etc/wsl.conf, then wsl --shutdown'
+        fail_stage 'a Ubuntu setting did not turn on'
       }
     } else {
       note '(Non-interactive run — skipping the Ubuntu settings change.)'
@@ -407,8 +428,8 @@ printf '[boot]\nsystemd=true\n' | sudo tee -a /etc/wsl.conf >/dev/null
       if (Test-Ubuntu 'command -v git >/dev/null && command -v curl >/dev/null') {
         ok 'Added.'
       } else {
-        warn "That didn't finish. Double-click Setup.cmd again to retry."
-        $script:SKIPPED += "Install git and curl in Ubuntu: wsl -d Ubuntu -- bash -lc 'sudo apt-get update && sudo apt-get install -y git curl'"
+        warn "That didn't finish (no internet, or the password prompt was dismissed)."
+        fail_stage 'two standard tools did not install'
       }
     } else {
       note '(Non-interactive run — skipping the tools install.)'
@@ -433,13 +454,13 @@ if (-not $nixPresent) {
       $nixPresent = Test-Ubuntu 'command -v nix'
       if (-not $nixPresent) {
         warn "The install didn't finish. The usual causes: no internet connection,"
-        warn 'or the password prompt being dismissed. Double-click Setup.cmd again to retry.'
+        warn 'or the password prompt being dismissed.'
+        fail_stage 'Nix did not install'
       }
     } else {
-      say 'Skipping for now — double-click Setup.cmd again when ready.'
-    }
-    if (-not $nixPresent) {
-      $script:SKIPPED += "Install Nix in Ubuntu: wsl -d Ubuntu -- bash -lc 'curl -fsSL https://install.determinate.systems/nix | sh -s -- install'"
+      say 'Stopping here, then — everything after this needs Nix. Double-click'
+      say 'Setup.cmd again when ready and it resumes at this stage.'
+      exit 0
     }
   } else {
     note '(Non-interactive run — skipping the Nix install.)'
@@ -481,10 +502,9 @@ printf 'experimental-features = nix-command flakes\n' >>"$HOME/.config/nix/nix.c
         warn "Your Nix settings file already has a line this wizard won't overwrite."
         warn "Ask for help adding 'nix-command flakes' to it, or edit it yourself:"
         note '  ~/.config/nix/nix.conf (inside Ubuntu)'
-        pause
+        fail_stage 'a Nix setting needs a hand-edit'
       } else {
-        warn "That didn't finish. Double-click Setup.cmd again to retry."
-        $script:SKIPPED += "Enable flakes: add 'experimental-features = nix-command flakes' to ~/.config/nix/nix.conf in Ubuntu"
+        fail_stage 'a Nix setting did not turn on'
       }
     } else {
       note '(Non-interactive run — skipping the settings change.)'
@@ -506,10 +526,11 @@ if (Test-Ubuntu ('test -f "$HOME"/' + (ConvertTo-BashSingleQuoted $script:WslRep
   note ('(In Windows, that folder appears as \\wsl.localhost\Ubuntu\home\' + $wslUser + '\' + $script:WslRepoName + ')')
 } elseif ($script:Interactive) {
   if ($PSScriptRoot.StartsWith('\\')) {
-    warn 'This wizard is already running from a network location, so there is no'
-    warn 'Windows folder to copy in. If the project lives in Ubuntu under a'
-    warn 'different name, keep using that copy.'
-    $script:SKIPPED += 'Copy the project into Ubuntu (run the wizard from the unzipped folder on the Windows disk)'
+    warn 'This wizard is running from a network location, so there is no Windows'
+    warn 'folder to copy in. Run it from the unzipped folder on the Windows disk'
+    warn '(or, if the project already lives in Ubuntu under another name, keep'
+    warn 'using that copy).'
+    fail_stage 'the project folder could not be located'
   } else {
     say 'Copying now — usually under a minute.'
     $drive = $PSScriptRoot.Substring(0, 1).ToLower()
@@ -540,12 +561,11 @@ mv "$HOME/.setup-partial-$name" "$HOME/$name"
       warn 'Ubuntu already has something by that name that does not look like this'
       warn 'project, so nothing was copied over it. Ask for help sorting that out.'
       note ('(Detail for a helper: ~/' + $script:WslRepoName + ' exists in the distro but has no flake.nix.)')
-      $script:SKIPPED += ('Copy the project into Ubuntu (something already sits at ~/' + $script:WslRepoName + ')')
+      fail_stage 'the copy destination is already taken'
     } else {
       warn "The copy didn't finish. The usual cause: Ubuntu (stage 3) not being"
-      warn 'ready yet. Double-click Setup.cmd again to retry — it never leaves a'
-      warn 'half-made copy behind.'
-      $script:SKIPPED += 'Copy the project into Ubuntu (double-click Setup.cmd again)'
+      warn 'ready yet. It never leaves a half-made copy behind, so retrying is safe.'
+      fail_stage 'the copy did not finish'
     }
   }
 } else {
@@ -567,9 +587,8 @@ if (Test-Ubuntu -InRepo 'test -e .devshell/bin') {
   if ($script:UbuntuExit -eq 0) {
     ok 'Tools downloaded.'
   } else {
-    warn "The download didn't finish. The usual causes: no internet connection,"
-    warn 'or an earlier stage being skipped. Fix that and double-click Setup.cmd again.'
-    $script:SKIPPED += 'nix build .#toolchain --out-link .devshell (in the Ubuntu copy)'
+    warn "The download didn't finish. The usual cause: no internet connection."
+    fail_stage 'the tools download did not finish'
   }
 } else {
   note '(Non-interactive run — skipping the download.)'
@@ -592,10 +611,8 @@ if (Test-Ubuntu -InRepo 'test -f node_modules/.modules.yaml') {
   if ($script:UbuntuExit -eq 0) {
     ok 'Building blocks installed.'
   } else {
-    warn "That didn't finish. The usual causes: the Nix stage being skipped, or"
-    warn 'no internet. Fix that and open this wizard again — it skips'
-    warn "what's already done."
-    $script:SKIPPED += 'nix develop -c pnpm install (in the Ubuntu copy)'
+    warn "That didn't finish. The usual cause: no internet connection."
+    fail_stage 'the install did not finish'
   }
 } else {
   note '(Non-interactive run — skipping the install.)'
@@ -612,6 +629,9 @@ if ($script:Interactive) {
   if ($script:UbuntuExit -eq 0) {
     ok 'Everything checks out. Your PC is ready.'
   } else {
+    # The one failure that doesn't stop the wizard: its remedy is the Claude
+    # app, which the next stage installs, and neither it nor GitHub depends
+    # on the check passing.
     warn 'The check found problems. Open the Claude app and ask it to reinstall'
     warn 'and re-check, or show this to a teammate.'
     $script:SKIPPED += 'Health check (nix develop -c pnpm install, then nix develop -c pnpm check)'
@@ -885,7 +905,7 @@ fi
 exit 0
 '@
   if ($script:UbuntuExit -ne 0) {
-    $script:SKIPPED += 'GitHub access: double-click Setup.cmd again to finish the sign-in and connect the folder'
+    fail_stage 'the GitHub setup did not finish'
   }
 }
 
