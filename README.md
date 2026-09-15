@@ -56,12 +56,15 @@ before your Mac needs anything:
 
 Then find the file called `Setup.command` in the project folder and double-click it. A
 window opens and walks you through everything, one step at a time — it opens the right web
-pages, tells you exactly what to click, and always asks before changing anything. It ends
+pages, tells you exactly what to click, and only ever touches this project folder and Nix's
+own settings; it never sends anything to GitHub for you. It ends
 by connecting the folder to the team's GitHub repository, including the one-time GitHub
 sign-in that lets you share your work. You can close it at any point and double-click it
-again later; it skips whatever is already done. If macOS warns that the file is from the
-internet, right-click it and choose Open instead. Setup for Windows and Linux will ship as
-a separate wizard.
+again later; it skips whatever is already done. If macOS says the file can't be opened or
+may be malware, click **Done** (not Move to Trash), open **System Settings → Privacy &
+Security**, scroll to the bottom, and click **Open Anyway** next to the message about
+`Setup.command`; confirm once and it opens normally from then on. Setup for Windows and
+Linux will ship as a separate wizard.
 
 Or do the bootstrap by hand:
 

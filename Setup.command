@@ -206,13 +206,16 @@ finish() {
 # Replace the example below. Set TOTAL_STAGES to match the stages you write.
 # ──────────────────────────────────────────────────────────────────────────
 
-TOTAL_STAGES=10
+TOTAL_STAGES=8
 
 # Double-clicked in Finder, the shell starts in $HOME — move to the directory
 # this script lives in (the repo root) before anything else.
 cd "$(dirname "$0")"
 if [[ ! -f flake.nix ]]; then
-  warn "Setup.command must live in the repository root (where flake.nix lives)."
+  warn "Setup.command seems to have been moved out of the project folder it came"
+  warn "with. Put it back next to the rest of the project's files, then"
+  warn "double-click it there."
+  note "(Detail for a helper: it must sit in the repository root, beside flake.nix.)"
   exit 1
 fi
 
@@ -263,8 +266,8 @@ if command -v nix >/dev/null 2>&1; then
   else
     warn "Nix is installed, but in a way this project can't fully use — Claude's"
     warn "automated helpers won't be able to build things on their own."
-    say "To fix it: uninstall Nix, then re-run this wizard and install it from"
-    say "the page it opens."
+    say "To fix it: uninstall Nix, then open this wizard again and install it"
+    say "from the page it opens."
     note "(Detail for a helper: no daemon socket at /nix/var/nix/daemon-socket/socket.)"
     pause
   fi
@@ -285,9 +288,10 @@ if nix eval --expr 'builtins ? getFlake' 2>/dev/null | grep -q '^true$'; then
 elif [[ $_features == *flakes* && $_features == *nix-command* ]]; then
   ok "Nix is already set up the way this project needs — nothing to change."
 else
-  say "Nix needs one settings line turned on before it can build this project."
+  say "Nix needs one settings line turned on before it can build this project;"
+  say "the wizard adds it now."
   note "(The line: 'experimental-features = nix-command flakes' in ~/.config/nix/nix.conf)"
-  if confirm "Add that settings line now?"; then
+  if [[ -t 0 ]]; then
     mkdir -p "$HOME/.config/nix"
     touch "$HOME/.config/nix/nix.conf"
     if grep -q '^experimental-features' "$HOME/.config/nix/nix.conf"; then
@@ -300,8 +304,8 @@ else
       ok "Done — the setting is on."
     fi
   else
+    note "(Non-interactive run — skipping the settings change.)"
     SKIPPED+=("Enable flakes: add 'experimental-features = nix-command flakes' to ~/.config/nix/nix.conf")
-    warn "Skipped — the next stages can't work until this is done."
   fi
 fi
 
@@ -327,73 +331,7 @@ else
   SKIPPED+=("nix build .#toolchain --out-link .devshell")
 fi
 
-# ── Stage 5: rename on fork (optional) ─────────────────────────────────────
-stage "Make it yours: rename the project"
-say "The project still carries its placeholder name, 'replaceme'. Give it your"
-say "own name now, or skip this if you're only trying things out."
-if grep -q '"name": "@replaceme/monorepo"' package.json 2>/dev/null; then
-  if confirm "Rename the project now?"; then
-    ask NEW_SCOPE "Your organization's short name (lowercase, no spaces — e.g. myorg):"
-    NEW_SCOPE=${NEW_SCOPE#@}
-    ask NEW_PROJECT "A name for the project itself [press Enter to use the same name]:"
-    [[ -z $NEW_PROJECT ]] && NEW_PROJECT="$NEW_SCOPE"
-    if [[ -z $NEW_SCOPE ]]; then
-      warn "No name given — skipping the rename."
-      SKIPPED+=("Rename @replaceme (see README.md for the two manual steps)")
-    else
-      say "Renaming..."
-      grep -rl '@replaceme' --exclude-dir={node_modules,.git,.direnv,dist,.repos,coverage} . |
-        while IFS= read -r f; do sed -i '' "s|@replaceme|@${NEW_SCOPE}|g" "$f"; done
-      sed -i '' "s|projectName = \"replaceme\"|projectName = \"${NEW_PROJECT}\"|" flake.nix
-      ok "Renamed."
-    fi
-  else
-    SKIPPED+=("Rename @replaceme (see README.md for the two manual steps)")
-  fi
-else
-  ok "Already renamed — nothing to do."
-fi
-
-# ── Stage 6: git history + reference checkouts (optional) ──────────────────
-stage "Keep a history of changes"
-if [[ -d .git ]]; then
-  ok "This folder already keeps a history of its changes."
-  if git config --file .gitmodules --get-regexp path >/dev/null 2>&1 &&
-    git ls-files --stage .repos 2>/dev/null | grep -q '^160000'; then
-    say ""
-    say ".repos/ holds copies of other projects that Claude reads for reference."
-    say "Nothing needs them to build — they're an optional download."
-    if ! git submodule status 2>/dev/null | grep -q '^-'; then
-      ok "They're already downloaded — nothing to do."
-    elif confirm "Download them now?"; then
-      note "(Runs: git submodule update --init --recursive)"
-      git submodule update --init --recursive || warn "The download had trouble; re-run this wizard any time to try again."
-    else
-      note "Skip is fine — re-run this wizard whenever you want them."
-    fi
-  fi
-else
-  say "This folder doesn't keep a history of changes yet — it looks like it"
-  say "arrived as a ZIP download."
-  say ""
-  say "If this project already lives on GitHub and you were invited to it, the"
-  say "GitHub stage at the end connects this folder to the team's shared history."
-  if confirm "Was this downloaded from a team project that is already on GitHub?"; then
-    git init >/dev/null
-    ok "History tracking started. The GitHub stage (last one) does the connecting."
-  elif confirm "Start keeping a history of changes now? (Recommended — it's how work gets shared and undone safely.)"; then
-    git init >/dev/null
-    git add -A
-    git commit -m "Initial commit from template" >/dev/null
-    ok "Done — this folder now keeps its history."
-    note "ZIP downloads don't include the .repos/ reference copies; a teammate can"
-    note "fetch them later if needed (the two addresses are listed in .gitmodules)."
-  else
-    SKIPPED+=("Start keeping a history of changes: git init (strongly recommended)")
-  fi
-fi
-
-# ── Stage 7: dev shell + dependencies ──────────────────────────────────────
+# ── Stage 5: dev shell + dependencies ──────────────────────────────────────
 stage "Install the project's building blocks"
 say "Next, the project downloads the pieces it's built from. Most of it is"
 say "already on your Mac from the tools download, so this is quicker."
@@ -418,7 +356,7 @@ else
   SKIPPED+=("nix develop -c pnpm install")
 fi
 
-# ── Stage 8: smoke check ───────────────────────────────────────────────────
+# ── Stage 6: smoke check ───────────────────────────────────────────────────
 stage "Quick health check"
 say "A quick check confirms everything on your Mac fits together."
 if [[ -t 0 ]]; then
@@ -427,8 +365,7 @@ if [[ -t 0 ]]; then
   if nix develop -c pnpm check; then
     ok "Everything checks out. Your Mac is ready."
   else
-    warn "The check found problems. If you renamed the project in stage 5, the"
-    warn "install needs one more pass — open the Claude app and ask it to reinstall"
+    warn "The check found problems. Open the Claude app and ask it to reinstall"
     warn "and re-check, or show this to a teammate."
     SKIPPED+=("Health check (nix develop -c pnpm install, then nix develop -c pnpm check)")
   fi
@@ -437,7 +374,7 @@ else
   SKIPPED+=("nix develop -c pnpm check")
 fi
 
-# ── Stage 9: the Claude app ────────────────────────────────────────────────
+# ── Stage 7: the Claude app ────────────────────────────────────────────────
 stage "The Claude app"
 say "This project is worked on inside the Claude desktop app: its Code tab is"
 say "where you open this folder and ask for changes in plain English."
@@ -469,7 +406,7 @@ if [[ ! -e .devshell/bin ]]; then
   warn "finish that first."
 fi
 
-# ── Stage 10: GitHub ───────────────────────────────────────────────────────
+# ── Stage 8: GitHub ────────────────────────────────────────────────────────
 stage "GitHub"
 say "The project's home is a GitHub repository. This stage checks that you can"
 say "reach it and that sharing your work with the team will just work."
@@ -494,101 +431,172 @@ _can_reach_origin() {
     git ls-remote --exit-code origin HEAD >/dev/null 2>&1
 }
 
-if _can_reach_origin; then
+# Linked means the local branch follows the team's branch on GitHub — the state
+# the adopt-in-place step below produces.
+_is_linked() {
+  git rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' >/dev/null 2>&1
+}
+
+if _can_reach_origin && _is_linked; then
   ok "You can already reach the repository: $(git remote get-url origin)"
   note "When you share work, GitHub checks it automatically."
 elif [[ ! -t 0 ]]; then
   note "(Non-interactive run — skipping the guided GitHub setup.)"
   SKIPPED+=("GitHub access: sign in (.devshell/bin/gh auth login --web) and connect the folder")
 else
-  say ""
-  say "Three things make GitHub work: an account, an accepted invitation to the"
-  say "repository, and a one-time sign-in so this Mac is allowed to send work up."
-  say ""
-  if ! confirm "Do you already have a GitHub account?"; then
-    open_url "https://github.com/signup"
-    step "Create the account (a personal email is fine) and verify the email."
-    pause "Press Enter once the account exists."
+  # ZIP downloads arrive with no history inside; start one so the folder can be
+  # connected. Nothing is sent anywhere — this only happens on this Mac.
+  if [[ ! -d .git ]]; then
+    git init >/dev/null
+    ok "Started keeping a history of changes for this folder."
   fi
-  say "A private repository stays invisible until you accept the team's invitation."
-  open_url "https://github.com/notifications"
-  step "Accept the repository invitation there (it also arrives by email)."
-  pause "Press Enter once it's accepted (or if it already was)."
   if ! _gh --version >/dev/null 2>&1; then
     warn "The GitHub sign-in tool comes with the tools download (stage 4), which"
-    warn "isn't done yet. Re-run this wizard to finish it, then this stage completes."
+    warn "isn't done yet. Open this wizard again to finish that first."
     SKIPPED+=("GitHub sign-in (needs the stage-4 tools): .devshell/bin/gh auth login --web")
-  elif _gh auth status >/dev/null 2>&1; then
-    ok "This Mac is already signed in to GitHub."
   else
-    say "Now the one-time sign-in. A browser window opens — approve it there."
-    say "When it asks about authenticating Git, answer yes."
-    if _gh auth login --hostname github.com --web --git-protocol https; then
-      ok "Signed in. From now on this Mac can send and receive the project automatically."
+    if _gh auth status >/dev/null 2>&1; then
+      ok "This Mac is already signed in to GitHub."
     else
-      warn "The sign-in didn't finish; re-run this wizard any time to retry."
-      SKIPPED+=("GitHub sign-in: .devshell/bin/gh auth login --web")
-    fi
-  fi
-  say ""
-  if git remote get-url origin >/dev/null 2>&1; then
-    ok "This folder already points at $(git remote get-url origin)."
-    note "When you share work, GitHub checks it automatically."
-  elif [[ ! -d .git ]]; then
-    warn "This folder isn't keeping a history of changes yet (that stage was"
-    warn "skipped), so it can't be connected. Re-run the wizard and say yes there."
-    SKIPPED+=("Connect the folder to GitHub (needs the git stage first)")
-  elif confirm "Was this folder downloaded from the team's repository (you were invited)?"; then
-    step "In the browser, open the repository page — the invitation email links to it."
-    step "Click the green 'Code' button and copy the web address it shows (the one starting with https)."
-    ask GIT_REMOTE_URL "Paste the repository address:"
-    if [[ -n $GIT_REMOTE_URL ]]; then
-      git remote add origin "$GIT_REMOTE_URL"
-      if git fetch origin; then
-        _default_branch=$(git remote show origin 2>/dev/null | sed -n 's/.*HEAD branch: //p')
-        [[ -z $_default_branch ]] && _default_branch=main
-        if confirm "Link this folder to the team's shared history now? Your files stay as they are."; then
-          # Adopt in place: point HEAD at the team's branch, then a mixed reset —
-          # it moves the branch and index only and never touches working files.
-          git symbolic-ref HEAD "refs/heads/${_default_branch}"
-          git reset -q "origin/${_default_branch}"
-          git branch --set-upstream-to="origin/${_default_branch}" "$_default_branch" >/dev/null 2>&1 || true
-          if [[ -z $(git status --porcelain 2>/dev/null) ]]; then
-            ok "Connected — this folder now matches the team's project exactly."
-          else
-            ok "Connected. A few files differ from the team's copy; the Claude app"
-            say "can show you what's different before you share anything."
-          fi
-          note "(This wizard never pushes for you.)"
-        else
-          SKIPPED+=("Link the folder to the team's history (re-run this stage)")
-        fi
-      else
-        warn "Couldn't reach the repository. Usual causes: the invitation isn't"
-        warn "accepted yet, or the sign-in step above didn't finish."
-        git remote remove origin 2>/dev/null || true
-        SKIPPED+=("Connect the folder to GitHub (re-run this wizard after accepting the invite)")
+      say ""
+      say "GitHub needs a one-time sign-in, so this Mac is allowed to send and"
+      say "receive the team's work."
+      say ""
+      if ! confirm "Do you already have a GitHub account?"; then
+        open_url "https://github.com/signup"
+        step "Create the account (a personal email is fine) and verify the email."
+        pause "Press Enter once the account exists."
       fi
-    else
-      warn "No address given; re-run this wizard when you have it."
-      SKIPPED+=("Connect the folder to GitHub")
+      say "Now the sign-in. A browser window opens — approve it there."
+      say "If a question here mentions 'authenticate Git', answer yes to it."
+      if _gh auth login --hostname github.com --web --git-protocol https; then
+        ok "Signed in. From now on this Mac can send and receive the project automatically."
+      else
+        warn "The sign-in didn't finish; open this wizard again any time to retry."
+        SKIPPED+=("GitHub sign-in: .devshell/bin/gh auth login --web")
+      fi
     fi
-  elif confirm "Create a brand-new GitHub repository for this project instead?"; then
-    open_url "https://github.com/new"
-    step "Create an empty repository (no README, no license — this project already has files)."
-    step "Copy the web address shown in the 'Quick setup' box."
-    ask GIT_REMOTE_URL "Paste the repository address:"
-    if [[ -n $GIT_REMOTE_URL ]]; then
-      git remote add origin "$GIT_REMOTE_URL"
-      ok "Connected to your new repository."
-      step "When you're ready to send your work up, ask Claude — or run: git push -u origin main"
-      note "(This wizard never pushes for you.)"
+    if ! _gh auth status >/dev/null 2>&1; then
+      SKIPPED+=("Connect the folder to GitHub (needs the sign-in above first)")
     else
-      warn "No address given; re-run this wizard when you have it."
-      SKIPPED+=("Connect the folder to GitHub: git remote add origin <url>")
+      # Which repository? Ask GitHub itself: the invitation the user accepted is
+      # what vouches for the address, so nothing is baked into this script and
+      # the user confirms the match before anything is wired up.
+      _repo_choices() {
+        _gh api "user/repos?affiliation=collaborator,organization_member&per_page=100" \
+          --jq '.[].full_name' 2>/dev/null
+      }
+      if ! git remote get-url origin >/dev/null 2>&1; then
+        say ""
+        say "Looking up the team's repository on your GitHub account..."
+        _repos=$(_repo_choices)
+        if [[ -z $_repos ]]; then
+          say "GitHub doesn't show a team repository for your account yet. A private"
+          say "repository stays invisible until you accept the team's invitation."
+          open_url "https://github.com/notifications"
+          step "Accept the repository invitation there (it also arrives by email)."
+          pause "Press Enter once it's accepted (or if it already was)."
+          _repos=$(_repo_choices)
+        fi
+        _chosen=""
+        _count=$(printf '%s' "$_repos" | grep -c . || true)
+        # GitHub's ZIP unzips to a folder named "<repository>-<branch>", so the
+        # folder's own name usually identifies the right repository.
+        _folder=$(basename "$PWD")
+        _candidate=""
+        if [[ $_count -eq 1 ]]; then
+          _candidate=$_repos
+        elif [[ $_count -gt 1 ]]; then
+          while IFS= read -r _r; do
+            _n=${_r#*/}
+            if [[ $_folder == "$_n" || $_folder == "$_n"-* ]]; then
+              _candidate=$_r
+              break
+            fi
+          done <<<"$_repos"
+        fi
+        if [[ -n $_candidate ]]; then
+          if confirm "Connect this folder to github.com/${_candidate}? (Check it matches your invitation.)"; then
+            _chosen=$_candidate
+          fi
+        fi
+        if [[ -z $_chosen && $_count -gt 1 ]]; then
+          say "Your account can reach more than one repository. Which one is this project?"
+          _i=0
+          while IFS= read -r _r; do
+            _i=$((_i + 1))
+            say "  ${_i}) github.com/${_r}"
+          done <<<"$_repos"
+          ask REPO_PICK "Type its number (or press Enter to skip):"
+          if [[ $REPO_PICK =~ ^[0-9]+$ && $REPO_PICK -ge 1 && $REPO_PICK -le $_count ]]; then
+            _chosen=$(printf '%s\n' "$_repos" | sed -n "${REPO_PICK}p")
+          fi
+        fi
+        if [[ -n $_chosen ]]; then
+          git remote add origin "https://github.com/${_chosen}.git"
+        else
+          say "No problem — the address can be given directly instead."
+          step "In the browser, open the repository page — the invitation email links to it."
+          step "Click the green 'Code' button and copy the web address it shows (the one starting with https)."
+          ask GIT_REMOTE_URL "Paste the repository address (or press Enter to skip):"
+          GIT_REMOTE_URL=${GIT_REMOTE_URL%/}
+          if [[ $GIT_REMOTE_URL =~ ^https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+(\.git)?$ ]]; then
+            git remote add origin "$GIT_REMOTE_URL"
+          elif [[ -n $GIT_REMOTE_URL ]]; then
+            warn "That doesn't look like a GitHub repository address (it should look"
+            warn "like https://github.com/team/project). Open this wizard again to retry."
+          fi
+        fi
+      fi
+      if ! git remote get-url origin >/dev/null 2>&1; then
+        warn "This folder isn't connected to the team's repository yet. Open this"
+        warn "wizard again to retry, or ask the person who invited you which"
+        warn "repository it is."
+        SKIPPED+=("Connect the folder to GitHub (repository not chosen yet)")
+      else
+        say ""
+        say "Connecting this folder to the team's repository..."
+        _fetched=0
+        if git fetch origin >/dev/null 2>&1; then
+          _fetched=1
+        else
+          say "The repository isn't reachable yet. A private repository stays invisible"
+          say "until you accept the team's invitation."
+          open_url "https://github.com/notifications"
+          step "Accept the repository invitation there (it also arrives by email)."
+          pause "Press Enter once it's accepted (or if it already was)."
+          git fetch origin >/dev/null 2>&1 && _fetched=1
+        fi
+        if [[ $_fetched == 1 ]]; then
+          _default_branch=$(git remote show origin 2>/dev/null | sed -n 's/.*HEAD branch: //p')
+          [[ -z $_default_branch ]] && _default_branch=main
+          if _is_linked; then
+            ok "Connected — this folder already follows the team's shared history."
+          else
+            say "Linking this folder to the team's shared history. Your files stay as they are."
+            # Adopt in place: point HEAD at the team's branch, then a mixed reset —
+            # it moves the branch and index only and never touches working files.
+            git symbolic-ref HEAD "refs/heads/${_default_branch}"
+            git reset -q "origin/${_default_branch}"
+            git branch --set-upstream-to="origin/${_default_branch}" "$_default_branch" >/dev/null 2>&1 || true
+            if [[ -z $(git status --porcelain 2>/dev/null) ]]; then
+              ok "Connected — this folder now matches the team's project exactly."
+            else
+              ok "Connected. A few files differ from the team's copy; the Claude app"
+              say "can show you what's different before you share anything."
+            fi
+          fi
+          note "(This wizard never sends anything to GitHub for you.)"
+          note "(One optional extra didn't come in the ZIP — reference copies of other"
+          note " projects, under .repos/. Claude can fetch them later if ever wanted.)"
+        else
+          warn "Still couldn't reach the repository. Usual causes: the invitation isn't"
+          warn "accepted yet, or the sign-in above didn't finish. Open this wizard again to retry."
+          git remote remove origin 2>/dev/null || true
+          SKIPPED+=("Connect the folder to GitHub (open this wizard again after accepting the invite)")
+        fi
+      fi
     fi
-  else
-    SKIPPED+=("Connect the folder to GitHub (git remote add origin <url>, then push)")
   fi
 fi
 
