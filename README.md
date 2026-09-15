@@ -63,8 +63,25 @@ sign-in that lets you share your work. You can close it at any point and double-
 again later; it skips whatever is already done. If macOS says the file can't be opened or
 may be malware, click **Done** (not Move to Trash), open **System Settings → Privacy &
 Security**, scroll to the bottom, and click **Open Anyway** next to the message about
-`Setup.command`; confirm once and it opens normally from then on. Setup for Windows and
-Linux will ship as a separate wizard.
+`Setup.command`; confirm once and it opens normally from then on.
+
+### First-time setup (Windows)
+
+The same three browser steps above apply. Then find the file called `Setup.cmd` in the
+project folder and double-click it. It walks you through the same stages as the Mac wizard,
+with two Windows-specific moments to expect:
+
+- Windows asks for permission once to turn on its built-in Linux layer (WSL), and may ask
+  for a restart — after restarting, double-click `Setup.cmd` again and it picks up where it
+  left off.
+- The wizard moves the project into Ubuntu's own disk, where it runs many times faster.
+  From then on the Ubuntu copy is the project: open it from the Claude app's Code tab by
+  picking the **Ubuntu (WSL)** environment, and find it in File Explorer under **Linux →
+  Ubuntu → home**. The folder you unzipped on Windows becomes just the wizard's launcher.
+
+If Windows SmartScreen says it protected your PC, click **More info**, then **Run anyway** —
+the same one-time confirmation as on the Mac. Setup for Linux will ship as a separate
+wizard.
 
 Or do the bootstrap by hand:
 

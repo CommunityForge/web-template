@@ -56,6 +56,18 @@
           agentsPkgs = llm-agents.packages.${system};
           buildPnpmPackage = import ./nix/buildPnpmPackage.nix { inherit pkgs nodejs pnpm; };
           treefmt = treefmt-nix.lib.evalModule pkgs (import ./nix/treefmt.nix { inherit pkgs; });
+          # The `bash -n` equivalent for the Windows wizard: treefmt has no
+          # PowerShell formatter, so parse errors are caught here instead. pwsh 7
+          # accepts syntax Windows PowerShell 5.1 rejects (&&/|| chains, ternary),
+          # so the 5.1 floor itself is held by review, not this check.
+          psparseScript = pkgs.writeText "psparse.ps1" ''
+            $errs = $null
+            $null = [System.Management.Automation.Language.Parser]::ParseFile($args[0], [ref]$null, [ref]$errs)
+            if ($errs.Count -gt 0) {
+              $errs | ForEach-Object { Write-Output ($_.ToString()) }
+              exit 1
+            }
+          '';
           toolchainPackages = [
             agentsPkgs.claude-code
             agentsPkgs.openspec
@@ -113,6 +125,12 @@
                   touch $out
                 '';
             formatting = treefmt.config.build.check self;
+            psparse = pkgs.runCommand "psparse" { nativeBuildInputs = [ pkgs.powershell ]; } ''
+              # pwsh insists on a writable config directory, even with -NoProfile.
+              export HOME="$TMPDIR"
+              pwsh -NoProfile -File ${psparseScript} ${./Setup.ps1}
+              touch $out
+            '';
             spellcheck = pkgs.stdenv.mkDerivation {
               name = "spellcheck";
               dontUnpack = true;

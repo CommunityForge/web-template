@@ -215,17 +215,33 @@ purely local file manipulation and is sandbox-safe.
 
 ## Setup wizard as a readiness probe
 
-`Setup.command` (repo root, macOS-only, double-clickable from Finder) is the human's guided
-first-time setup (README.md links it). For an agent it is a readiness probe: run
-`bash Setup.command </dev/null` and every prompt defaults to skip — including the otherwise
-unprompted toolchain build, dependency install, health check, and Nix settings write, plus the
-Claude-app install walkthrough and the GitHub access chain (history init, remote wiring,
-sign-in), all of which are TTY-gated — so nothing is mutated
-and the output reports which stages are
-already satisfied, ending with a "still to do by hand" list.
-The stages that prompt interactively (installing Nix, account sign-ins) are privileged or
-account-bound: they belong to the human, who runs the wizard themselves — tell them to when a
-stage they need is unsatisfied.
+Two wizards share one contract: `Setup.command` (macOS, double-clickable from Finder) and
+`Setup.cmd` + `Setup.ps1` (Windows 11, double-clickable from Explorer; the `.cmd` is only the
+launcher for the `.ps1`). Both are the human's guided first-time setup (README.md links them),
+and both are the same file again as an agent readiness probe: with stdin redirected, every
+mutation defaults to skip — toolchain build, dependency install, health check, Nix settings
+write, the Claude-app walkthrough, the GitHub access chain (history init, remote wiring,
+sign-in), and on Windows also the WSL/Ubuntu/Nix installs and the copy of the project into the
+distro — so nothing is mutated and the output reports which stages are already satisfied,
+ending with a "still to do by hand" list of runnable commands.
+
+Probe invocations:
+
+- macOS: `bash Setup.command </dev/null`
+- Windows, from cmd/PowerShell: `powershell -NoProfile -ExecutionPolicy Bypass -File Setup.ps1 < NUL`
+- From an agent inside the WSL distro (the normal case on Windows — interop):
+  `powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$(wslpath -w ./Setup.ps1)" </dev/null`
+
+The PowerShell probe adds the Windows-only facts (WSL enabled, Ubuntu provisioned, Claude app
+installed); distro-only state can equally be probed directly with bash (`test -e .devshell/bin`
+and friends). `bash Setup.command </dev/null` run inside WSL exits 0 at its macOS gate —
+expected, not an error. On Windows the wizard lives in and copies the project to the distro's
+own filesystem (`~/<folder>`); the unzipped folder on the Windows drive is only the launcher,
+and `/mnt/c` is never the working copy.
+
+The stages that prompt interactively (installing Nix, WSL, Ubuntu, account sign-ins) are
+privileged or account-bound: they belong to the human, who runs the wizard themselves — tell
+them to when a stage they need is unsatisfied.
 
 ## Agent configuration
 

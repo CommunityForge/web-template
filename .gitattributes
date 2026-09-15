@@ -3,6 +3,9 @@
 *.sh  text eol=lf
 *.md  diff=markdown
 
+# cmd.exe reads batch files line by line; CRLF keeps it out of its LF quirks.
+Setup.cmd text eol=crlf
+
 pnpm-lock.yaml -diff linguist-generated
 flake.lock     -diff linguist-generated
 

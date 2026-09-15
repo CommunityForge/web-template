@@ -227,8 +227,9 @@ banner "First-time setup (macOS)"
 # instructions when they're missing, so every later stage can assume them.
 stage "Your Mac"
 if [[ "$(uname -s 2>/dev/null || echo unknown)" != Darwin ]]; then
-  warn "This wizard covers macOS only. Setup for Windows and Linux will ship"
-  warn "as a separate wizard."
+  warn "This wizard covers macOS only. On Windows, close this window and"
+  warn "double-click Setup.cmd instead. Setup for Linux will ship as a"
+  warn "separate wizard."
   exit 0
 fi
 say "macOS detected."
