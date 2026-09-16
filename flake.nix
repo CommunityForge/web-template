@@ -1,20 +1,33 @@
 {
   description = "A pnpm + TypeScript + Effect monorepo scaffold with reproducible Nix builds";
 
+  # Inputs use `git+https` with shallow fetches instead of `github:`: Claude
+  # cloud sessions route GitHub API/tarball requests through a proxy scoped to
+  # the session's own repo (403 for every other repo), while plain git fetches
+  # of public repos pass. The nested overrides keep transitive inputs off the
+  # tarball fetcher too -- `grep '"type": "github"' flake.lock` must stay empty.
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    flake-parts.url = "github:hercules-ci/flake-parts";
+    nixpkgs.url = "git+https://github.com/NixOS/nixpkgs?ref=nixpkgs-unstable&shallow=1";
+    flake-parts = {
+      url = "git+https://github.com/hercules-ci/flake-parts?shallow=1";
+      inputs.nixpkgs-lib.follows = "nixpkgs";
+    };
     llm-agents = {
-      url = "github:numtide/llm-agents.nix";
+      url = "git+https://github.com/numtide/llm-agents.nix?shallow=1";
       inputs.nixpkgs.follows = "nixpkgs";
+      inputs.flake-parts.follows = "flake-parts";
+      inputs.treefmt-nix.follows = "treefmt-nix";
+      inputs.systems.url = "git+https://github.com/nix-systems/default?shallow=1";
+      inputs.bun2nix.url = "git+https://github.com/Mic92/bun2nix?ref=fix-structured-attrs-hook&shallow=1";
     };
     treefmt-nix = {
-      url = "github:numtide/treefmt-nix";
+      url = "git+https://github.com/numtide/treefmt-nix?shallow=1";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     git-hooks-nix = {
-      url = "github:cachix/git-hooks.nix";
+      url = "git+https://github.com/cachix/git-hooks.nix?shallow=1";
       inputs.nixpkgs.follows = "nixpkgs";
+      inputs.flake-compat.url = "git+https://github.com/NixOS/flake-compat?shallow=1";
     };
   };
 
