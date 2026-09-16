@@ -38,6 +38,3 @@ result-*
 !.claude/output-styles
 !.claude/launch.json
 .agents/skills/*-workspace/
-
-# hooks
-.pre-commit-config.yaml
