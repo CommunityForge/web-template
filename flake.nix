@@ -82,7 +82,6 @@
             }
           '';
           toolchainPackages = [
-            agentsPkgs.claude-code
             agentsPkgs.openspec
             nodejs
             pnpm
