@@ -94,3 +94,7 @@ pinned with ordinary ranges here — intentional.
 
 `nix build .#frontend` emits the static bundle to `$out`; its `checkPhase` runs `check`,
 `test --run` and `oxlint --type-aware`.
+
+- **`wrangler.jsonc` carries no Worker `name` ON PURPOSE.** The deploy and preview workflows pass
+  it with `--name` from the `CLOUDFLARE_WORKER_NAME` GitHub variable, so a fork never edits the
+  file. The absent name is the contract; keep it absent.

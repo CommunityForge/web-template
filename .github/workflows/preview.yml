@@ -20,6 +20,9 @@ jobs:
       id-token: write
       pull-requests: write
     steps:
+      - name: Require the Worker name
+        if: vars.CLOUDFLARE_WORKER_NAME == ''
+        run: echo "::error::Set the repository variable CLOUDFLARE_WORKER_NAME to the Worker's name (Settings → Secrets and variables → Actions → Variables)" && exit 1
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
@@ -35,10 +38,12 @@ jobs:
           # Wrangler appends one JSON object per line here; the version-upload record carries the
           # preview URLs, which is sturdier than scraping them out of the human-readable log.
           WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/wrangler-output.ndjson
+          WORKER_NAME: ${{ vars.CLOUDFLARE_WORKER_NAME }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           # `pr-<n>` is a stable alias, so the URL stays the same across pushes to the same PR.
           nix run nixpkgs#wrangler -- versions upload \
+            --name "$WORKER_NAME" \
             --preview-alias "pr-${PR_NUMBER}" \
             --tag "${GITHUB_SHA::7}" \
             --message "Pull request #${PR_NUMBER} at ${GITHUB_SHA::7}"

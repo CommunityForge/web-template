@@ -18,12 +18,12 @@ Every placeholder is one of four tokens. Substitute them in this order, over eve
 except `node_modules`, `.git`, `.direnv`, `dist`, `.repos` and `pnpm-lock.yaml`
 (`sed -i ''` is BSD/macOS; on GNU sed drop the `''`):
 
-| Token         | Is                                   | Replace with     | Form                          |
-| ------------- | ------------------------------------ | ---------------- | ----------------------------- |
-| `@replaceme`  | The npm scope                        | `@yourscope`     | literal                       |
-| `replaceme`   | The slug: Nix names, Cloudflare name | `yourslug`       | word-bounded: `\breplaceme\b` |
-| `Replaceme`   | The display name: page title, API    | `Your Name`      | literal                       |
-| `example.org` | The production domain                | `yourdomain.tld` | literal                       |
+| Token         | Is                                | Replace with     | Form                          |
+| ------------- | --------------------------------- | ---------------- | ----------------------------- |
+| `@replaceme`  | The npm scope                     | `@yourscope`     | literal                       |
+| `replaceme`   | The slug: Nix names               | `yourslug`       | word-bounded: `\breplaceme\b` |
+| `Replaceme`   | The display name: page title, API | `Your Name`      | literal                       |
+| `example.org` | The production domain             | `yourdomain.tld` | literal                       |
 
 The slug is word-bounded because "replacement" appears in vendored documents; a bare substitution
 would rewrite it. The scope runs first so the slug pass does not see it.
@@ -40,6 +40,19 @@ pnpm install
 Then set every unit's `hash` in its `<unit>/<name>.nix` back to `pkgs.lib.fakeHash`: the package name
 feeds the fixed-output derivation, so every hash moves. `nix build .#<unit>` prints the real one to
 paste back in.
+
+## Deploying
+
+Only GitHub deploys; nothing is ever published from a laptop. A fork sets these once, under the repository's Settings → Secrets and variables → Actions:
+
+| Kind     | Name                     | Is                                                                                                                |
+| -------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| Secret   | `CLOUDFLARE_API_TOKEN`   | A Cloudflare API token allowed to edit Workers                                                                    |
+| Secret   | `CLOUDFLARE_ACCOUNT_ID`  | The Cloudflare account the Worker lives in                                                                        |
+| Variable | `CLOUDFLARE_WORKER_NAME` | Required. The existing Worker's name: the part of its `workers.dev` address before the first dot                  |
+| Variable | `PRODUCTION_URL`         | Optional. The custom domain once there is one; until then the deployment badge links to the `workers.dev` address |
+
+Every push to `main` deploys the site. Every pull request gets a preview link posted as a comment.
 
 ## Getting a shell
 
