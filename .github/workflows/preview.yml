@@ -41,6 +41,11 @@ jobs:
           WORKER_NAME: ${{ vars.CLOUDFLARE_WORKER_NAME }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
+          # A version only gets a preview URL while the Worker itself has Preview URLs switched on.
+          # `versions upload` reads that switch but never sets it; `triggers deploy` applies the
+          # `workers_dev`/`preview_urls` settings from wrangler.jsonc, so a Worker created by hand
+          # in the dashboard needs no manual toggle.
+          nix run nixpkgs#wrangler -- triggers deploy --name "$WORKER_NAME"
           # `pr-<n>` is a stable alias, so the URL stays the same across pushes to the same PR.
           nix run nixpkgs#wrangler -- versions upload \
             --name "$WORKER_NAME" \

@@ -10,6 +10,7 @@
     "not_found_handling": "single-page-application",
   },
   "workers_dev": true,
-  // `wrangler versions upload` returns a preview URL only while this is on.
+  // A version gets a preview URL only while this is on. Only a deploy or `wrangler triggers deploy`
+  // applies it to the Worker; `wrangler versions upload` merely reads it.
   "preview_urls": true,
 }
