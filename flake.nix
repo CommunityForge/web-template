@@ -49,8 +49,12 @@
       imports = [
         treefmt-nix.flakeModule
         git-hooks-nix.flakeModule
-        ./packages/core/core.nix
+        ./packages/lib/lib.nix
+        ./packages/domain/domain.nix
+        ./packages/db/db.nix
+        ./packages/supabase/supabase.nix
         ./apps/frontend/frontend.nix
+        ./apps/server/server.nix
       ];
       perSystem =
         {
@@ -99,6 +103,7 @@
             # configures git's credential helper) and the wizard library's
             # set_secret/set_var helpers.
             pkgs.gh
+            pkgs.supabase-cli
             pkgs.oxfmt
             pkgs.oxlint
             pkgs.tsgolint

@@ -1,0 +1,59 @@
+name: Preview
+
+on:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    # Pull requests from forks cannot read the Cloudflare secrets, so there is nothing to upload.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    environment:
+      name: preview
+      url: ${{ steps.upload.outputs.url }}
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - name: Build
+        working-directory: apps/frontend
+        run: nix build "$GITHUB_WORKSPACE#frontend"
+      - name: Upload preview version
+        id: upload
+        working-directory: apps/frontend
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # Wrangler appends one JSON object per line here; the version-upload record carries the
+          # preview URLs, which is sturdier than scraping them out of the human-readable log.
+          WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/wrangler-output.ndjson
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          # `pr-<n>` is a stable alias, so the URL stays the same across pushes to the same PR.
+          nix run nixpkgs#wrangler -- versions upload \
+            --preview-alias "pr-${PR_NUMBER}" \
+            --tag "${GITHUB_SHA::7}" \
+            --message "Pull request #${PR_NUMBER} at ${GITHUB_SHA::7}"
+          url=$(jq -r 'select(.type == "version-upload") | .preview_alias_url // .preview_url // empty' \
+            "$WRANGLER_OUTPUT_FILE_PATH")
+          if [ -z "$url" ]; then
+            echo "::error::wrangler did not report a preview URL" && exit 1
+          fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+      - name: Comment on the pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          URL: ${{ steps.upload.outputs.url }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          body="$(printf '## Preview 🔶\n\n%s\n\nBuilt from %s.' "$URL" "$SHA")"
+          gh pr comment "$PR_NUMBER" --edit-last --create-if-none --body "$body"

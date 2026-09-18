@@ -8,5 +8,5 @@
   // reference -- it sets `composite: false`, `noEmit: true`, `moduleResolution: "bundler"` and
   // is type-checked by its own `tsc -b`, since the bundler resolves workspace deps itself.
   // Only reference apps here if they emit via `tsc` and participate in the composite graph.
-  "references": []
+  "references": [{ "path": "apps/server" }]
 }

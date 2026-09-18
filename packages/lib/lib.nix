@@ -5,12 +5,12 @@ _: {
       fs = pkgs.lib.fileset;
     in
     {
-      packages.core = buildPnpmPackage {
+      packages.lib = buildPnpmPackage {
         # Set to `pkgs.lib.fakeHash` when dependencies change; the failing build prints the
         # real hash to paste back in.
-        hash = "sha256-KjkqEAUTJBaZ9u7NBEyLmaDen+hduqR8BPoCSF2CCbU=";
+        hash = "sha256-qwlaFdysxSN9+cE6e958I9AY5n4oNnxggAJeKLFwHTM=";
         packageJsonPath = ./package.json;
-        pnpmWorkspaces = [ "@replaceme/core" ];
+        pnpmWorkspaces = [ "@replaceme/lib" ];
         # Explicit rather than `fs.unions [ ./. ]`: a bare directory sweeps node_modules/,
         # dist/ and tsbuildinfo into the sandbox, which only looks clean because git-tracked
         # filtering hides it. A stale dist/ would silently satisfy `tsc -b` incrementality.
@@ -28,16 +28,16 @@ _: {
         doCheck = true;
         buildPhase = ''
           runHook preBuild
-          pnpm --filter=@replaceme/core build
+          pnpm --filter=@replaceme/lib build
           runHook postBuild
         '';
         checkPhase = ''
           runHook preCheck
-          pnpm --filter=@replaceme/core check
-          pnpm --filter=@replaceme/core test --run
+          pnpm --filter=@replaceme/lib check
+          pnpm --filter=@replaceme/lib test --run
           # `--disable-nested-config` stops oxlint discovering `.repos/effect/.oxlintrc.json`,
           # which declares a JS plugin that is not installed.
-          oxlint --type-aware --disable-nested-config packages/core
+          oxlint --type-aware --disable-nested-config packages/lib
           runHook postCheck
         '';
         # `dist/.` rather than `dist/*`: the glob fails on an empty directory and drops dotfiles.
@@ -45,7 +45,7 @@ _: {
         installPhase = ''
           runHook preInstall
           mkdir -p $out
-          cp -r ./packages/core/dist ./packages/core/src ./packages/core/package.json $out/
+          cp -r ./packages/lib/dist ./packages/lib/src ./packages/lib/package.json $out/
           runHook postInstall
         '';
       };

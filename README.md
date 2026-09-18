@@ -6,23 +6,40 @@
 > Public-facing documentation, including installation instructions, is incomplete.
 
 A minimal, app-agnostic pnpm + TypeScript + Effect monorepo with reproducible Nix builds.
-Structure follows [Effect](https://github.com/Effect-TS/effect)'s conventions; the Nix layer
-follows SolidChess's. Everything domain-specific has been stripped — `packages/core` is a
-placeholder to be deleted once real modules land, and `apps/frontend` is a Vite + React 19 + Tailwind 4
-SPA shell.
+Structure follows [Effect](https://github.com/Effect-TS/effect)'s conventions. The units are a
+contract package (`packages/domain`), a Postgres package with an audited, deny-by-default schema
+(`packages/db`), Effect bindings for Supabase auth (`packages/supabase`), an HTTP API server that
+implements the contract (`apps/server`), a Vite + React 19 + Tailwind 4 SPA shell
+(`apps/frontend`), and `packages/lib`, the copy source for a new package.
 
-The npm scope is the literal placeholder `@replaceme`. Renaming on fork takes two steps.
+## Renaming on fork
 
-First the scope (`sed -i ''` is BSD/macOS; on GNU sed drop the `''`):
+Every placeholder is one of four tokens. Substitute them in this order, over every tracked file
+except `node_modules`, `.git`, `.direnv`, `dist`, `.repos` and `pnpm-lock.yaml`
+(`sed -i ''` is BSD/macOS; on GNU sed drop the `''`):
+
+| Token         | Is                                   | Replace with     | Form                          |
+| ------------- | ------------------------------------ | ---------------- | ----------------------------- |
+| `@replaceme`  | The npm scope                        | `@yourscope`     | literal                       |
+| `replaceme`   | The slug: Nix names, Cloudflare name | `yourslug`       | word-bounded: `\breplaceme\b` |
+| `Replaceme`   | The display name: page title, API    | `Your Name`      | literal                       |
+| `example.org` | The production domain                | `yourdomain.tld` | literal                       |
+
+The slug is word-bounded because "replacement" appears in vendored documents; a bare substitution
+would rewrite it. The scope runs first so the slug pass does not see it.
 
 ```sh
-grep -rl '@replaceme' --exclude-dir={node_modules,.git,.direnv,dist,.repos} . \
-  | xargs sed -i '' 's|@replaceme|@yourscope|g'
+files() { git ls-files | grep -v '^pnpm-lock.yaml$'; }
+files | xargs sed -i '' 's|@replaceme|@yourscope|g'
+files | xargs sed -i '' -E 's/\breplaceme\b/yourslug/g'
+files | xargs sed -i '' 's|Replaceme|Your Name|g'
+files | xargs sed -i '' 's|example\.org|yourdomain.tld|g'
+pnpm install
 ```
 
-Then `projectName` in `flake.nix`, which names the `toolchain` and `devShell` derivations.
-A bare `replaceme` search-and-replace will not do: it also matches inside the word
-"replacement", which appears in several vendored skill documents.
+Then set every unit's `hash` in its `<unit>/<name>.nix` back to `pkgs.lib.fakeHash`: the package name
+feeds the fixed-output derivation, so every hash moves. `nix build .#<unit>` prints the real one to
+paste back in.
 
 ## Getting a shell
 
@@ -93,15 +110,16 @@ nix develop -c pnpm install
 `.repos/` holds shallow read-only checkouts that coding agents consult as prior art. Nothing
 in the build depends on them; skip the submodule step if you do not need them.
 
-| Command            | What it does                                      |
-| ------------------ | ------------------------------------------------- |
-| `pnpm check`       | Type-checks the whole graph, sources and tests    |
-| `pnpm test`        | Vitest across all workspace units                 |
-| `pnpm lint`        | oxlint                                            |
-| `pnpm build`       | Builds every unit's `dist/`                       |
-| `nix fmt`          | treefmt — nix, shell, TS/JS, Markdown, YAML, JSON |
-| `nix flake check`  | Formatting and spellcheck                         |
-| `nix build .#core` | Reproducible build of one unit                    |
+| Command           | What it does                                       |
+| ----------------- | -------------------------------------------------- |
+| `pnpm check`      | Type-checks the whole graph, sources and tests     |
+| `pnpm test`       | Vitest across all workspace units                  |
+| `pnpm test:types` | tstyche type tests, in every unit that has them    |
+| `pnpm lint`       | oxlint                                             |
+| `pnpm build`      | Builds every unit's `dist/`                        |
+| `nix fmt`         | treefmt — nix, shell, TS/JS, Markdown, YAML, JSON  |
+| `nix flake check` | Formatting, spellcheck, and every unit's Nix build |
+| `nix build .#lib` | Reproducible build of one unit                     |
 
 ## Where the details live
 
@@ -109,10 +127,11 @@ in the build depends on them; skip the submodule step if you do not need them.
 load-bearing, adding a package or an app, the Nix build model, and the Effect wiring. It is written
 for both humans and coding agents; read it before changing anything structural.
 
-`apps/frontend/AGENTS.md` covers that app specifically.
+Each unit has its own: `packages/domain/AGENTS.md`, `packages/db/AGENTS.md`,
+`packages/supabase/AGENTS.md`, `apps/server/AGENTS.md`, `apps/frontend/AGENTS.md`.
 
 ## License
 
 Not yet chosen. Until a `LICENSE` file lands, no rights are granted — the code is readable
-here but not licensed for reuse, and `packages/core` is marked `private` so it cannot be
+here but not licensed for reuse, and `packages/lib` is marked `private` so it cannot be
 published by accident.

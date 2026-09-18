@@ -8,17 +8,31 @@ packages:
 catalog:
   "@types/node": ^25.9.5
   "@vitest/coverage-v8": 4.1.10
+  tstyche: 7.2.3
+  tsx: ^4.20.0
   typescript: 7.0.2
   vitest: 4.1.10
 
-# Named catalog so the whole Effect line moves in lockstep.
+# Named catalog so the whole Effect line moves in lockstep: bump the one version below and
+# every unit follows. A dist-tag here (`rc`) would let a freshly resolved unit land on a newer
+# release than the units already in the lockfile. `@effect/vitest` from rc.113 on requires
+# vitest 5, so the pin and the `vitest` catalog entry move together.
 catalogs:
   effect:
-    "@effect/atom-react": rc
-    "@effect/platform-browser": rc
+    "@effect/atom-react": 4.0.0-rc.112
+    "@effect/platform-browser": 4.0.0-rc.112
+    "@effect/platform-node": 4.0.0-rc.112
+    "@effect/platform-node-shared": 4.0.0-rc.112
+    "@effect/sql-pg": 4.0.0-rc.112
     "@effect/tsgo": 0.36.4
-    "@effect/vitest": rc
-    effect: rc
+    "@effect/vitest": 4.0.0-rc.112
+    effect: 4.0.0-rc.112
+
+# `@effect/platform-node` depends on `platform-node-shared` with a caret range, which a
+# prerelease resolver satisfies with the NEWEST rc -- one built against a newer `effect` than
+# the catalog pins. Held to the catalog so the whole line really does move together.
+overrides:
+  "@effect/platform-node-shared": catalog:effect
 
 engineStrict: true
 

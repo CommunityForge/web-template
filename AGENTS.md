@@ -34,6 +34,7 @@ tool versions and no native postinstall to run inside the build sandbox. Consequ
 | `pnpm check`         | `tsc -b tsconfig.json` — type-checks the whole graph, sources and tests  |
 | `pnpm build`         | Builds every unit's `dist/` (`tsc -b`, then Babel for `/*#__PURE__*/`)   |
 | `pnpm test`          | Vitest across all workspace units                                        |
+| `pnpm test:types`    | tstyche type tests (`test/**/*.tst.ts`) in every unit that has them      |
 | `pnpm coverage`      | Same, with v8 coverage                                                   |
 | `pnpm lint`          | oxlint, including the type-aware tsgolint pass                           |
 | `pnpm clean`         | Removes `dist/`, `coverage/`, `*.tsbuildinfo`                            |
@@ -42,6 +43,9 @@ tool versions and no native postinstall to run inside the build sandbox. Consequ
 | `nix build .#<unit>` | Reproducible build of one unit; its `checkPhase` re-runs check/test/lint |
 
 ### Formatting
+
+`tsx` is a root dev dependency so `src/bin/*.ts` entry points (`packages/db/src/bin/migrate.ts`, `apps/server`'s dev
+launcher) run without a build: `pnpm exec tsx <file>`.
 
 `nix fmt` is treefmt over nixfmt, shfmt, shellcheck and oxfmt. oxfmt is not JS/TS-only — its
 treefmt module claims `*.md`, `*.yaml`, `*.json`, `*.jsonc`, `*.css` and `*.html` as well, so
@@ -60,7 +64,19 @@ vitest.config.ts         `test.projects` globs; keeps a bare `vitest` from sweep
 vitest.shared.ts         Shared base every unit merges via `mergeConfig`
 nix/buildPnpmPackage.nix pnpm-workspace-aware wrapper around buildNpmPackage
 <unit>/<name>.nix        One flake-parts module per unit, colocated
+supabase/                Supabase CLI project: `config.toml`, `seed.sql` (auth.* only; DDL is packages/db's)
 ```
+
+The units, each with an `AGENTS.md` recording only what is specific to it:
+
+| Unit                | Is                                                                             |
+| ------------------- | ------------------------------------------------------------------------------ |
+| `packages/lib`      | The copy source for a new package: one module, one test, the unit `.nix` shape |
+| `packages/domain`   | The contracts a client and the server agree on; depends on `effect` alone      |
+| `packages/db`       | Postgres client, DDL, exposure audit, repositories, and the tstyche drift gate |
+| `packages/supabase` | Effect bindings for `supabase-js`: client, `Auth` adapter, claim decoding      |
+| `apps/frontend`     | Vite + React SPA, a bundler-built leaf                                         |
+| `apps/server`       | The HTTP API implementing `domain`; `tsc`-emitting Node app                    |
 
 `tsconfig.base.json` uses `${configDir}` templating, which is why every leaf tsconfig is six lines
 with no path overrides.
@@ -74,8 +90,9 @@ bundler-built leaf, not a composite project. See `apps/frontend/AGENTS.md`.
   `workspace:`; unit-local dependencies may pin ordinary ranges** (the frontend's React stack and
   the root's Babel toolchain do). The catalogs are what keep the shared tree coherent as the repo
   grows, and they make `pnpm add <pkg>` the wrong command: edit the manifest — and the catalog in
-  `pnpm-workspace.yaml` for a shared dependency — then install. The named `effect` catalog exists
-  so the whole Effect line moves in lockstep.
+  `pnpm-workspace.yaml` for a shared dependency — then install. The named `effect` catalog pins the
+  whole Effect line to one release so it moves in lockstep; bump every entry together, and keep
+  `@effect/vitest`'s vitest peer range satisfied by the `vitest` catalog entry.
 - **Never add `eslint`, `eslint-config-next`, or typescript-eslint.** The repo runs
   `typescript@7` (Effect's tsgo build) and typescript-eslint hard-refuses to load against it. The
   type-aware pass uses tsgolint, which reads types through the same Go compiler.
@@ -105,7 +122,9 @@ what keeps a module free to add exports without colliding with its consumers' lo
 
 The rule has a consequence worth stating outright: **do not `export default`.** A default import
 cannot be namespace-qualified, so a default export puts the module permanently outside the
-convention. `apps/frontend/src/App.tsx` is exported by name for exactly this reason.
+convention. `apps/frontend/src/App.tsx` is exported by name for exactly this reason. The one
+standing exception is a tstyche template (`test/**/*.tst.ts`), which tstyche reads from the default
+export — a tool contract, like case 3 below.
 
 Unqualified is correct in four cases, and only these:
 
@@ -113,7 +132,7 @@ Unqualified is correct in four cases, and only these:
    (`strictEqual`), `@testing-library/react` (`render`/`fireEvent`/`waitFor`/`within`), and
    `vitest/config` (`defineConfig`/`mergeConfig`). These read as syntax at a call site that is
    nothing but call sites; a prefix on every assertion line buys nothing.
-2. **`effect/Function`** — `pipe`, `identity`, `flow`. Same reasoning.
+2. **`effect/Function`** — `pipe`, `identity`, `flow`, `dual`, `constVoid`. Same reasoning.
 3. **Third-party modules that only offer a default export** — `@tailwindcss/vite`,
    `@vitejs/plugin-react`. A namespace object is not callable, so this is a language limit rather
    than a preference. It does not license a _new_ default export in this repo; see above.
@@ -134,6 +153,37 @@ everything importing _from_ them still does so qualified.
 `tsconfig.base.json`'s `namespaceImportPackages` steers the language service's auto-imports toward
 this form. It matches package names only, so the `@/*` alias and relative specifiers are on you.
 
+## Effect code
+
+The four Effect units (`domain`, `db`, `supabase`, `server`) share these, and a new module that breaks one reads
+as the odd one out:
+
+- **No mutation.** No `let`, no `for`, no `.push`, no `.forEach`. Build with `pipe` and `effect/Array`; a batch of
+  effects is `Effect.forEach`, not a loop. Where a module's name collides with a JavaScript built-in, the module takes
+  the plain name and the built-in is written `globalThis.X` — `import * as Array from "effect/Array"` alongside
+  `globalThis.Array<T>`.
+- **`Effect.fn("<Service>.<method>")` over a returned `Effect.gen`.** `Effect.gen` is fine inside a service's `make`
+  or a group's builder; a method may not _return_ a bare `Effect.gen`. `Effect.fn` wraps it and names the span in the
+  same stroke; a method built as a pipeline ends with `Effect.withSpan("<Service>.<method>")`.
+- **Errors are values.** `Schema.TaggedError` for every failure; no `throw`, no `try`/`catch`. A promise boundary is
+  `Effect.tryPromise` with a `catch` that maps to a tagged error. A method's error channel is written out in full and
+  never widened to `unknown`.
+- **Model in `Schema`.** Sum types are `Schema.Union` of tagged members or `Data.TaggedEnum` — never a `kind` field
+  beside correlated optionals, never a boolean standing in for a variant, never a hand-written `_tag`. If a docstring
+  asserts an invariant, the type enforces it.
+- **Lift nullish.** `Option.fromNullishOr` and match, including at driver and SDK boundaries. Comparing to `null` or
+  `undefined` is the habit this displaces.
+- **Layers read config; they are not functions of it.** Every layer looks its values up through the ambient
+  `ConfigProvider`. No `Config.withDefault`: the launcher names every value, and a missing one stops the process.
+- **Identifiers are fully qualified**: `"@replaceme/<pkg>/<Module>"` on every `Schema.Class`, `TaggedError` and
+  `Context.Service`, with a folder carried (`"@replaceme/domain/TopLevel/Api"`). Renaming the scope renames the prefix
+  and nothing else.
+- **Every `@since` reads `0.0.0`**, uniformly, because nothing is published and the tag has no referent yet. A full
+  JSDoc block on every public export, with `@since` and `@category`.
+- **A docblock states what is true of this file now and cites no other file.** Invariants and non-obvious constraints
+  only: no changelogs, no arguments with a prior version, no cross-file citations, no unverified `TODO`. Load-bearing
+  words are set in CAPS (`REQUEST-scoped`, `ON PURPOSE`) to mark the sentence a reader must not skim past.
+
 ## Tests
 
 Every unit merges `vitest.shared.ts`, so these hold everywhere:
@@ -144,7 +194,11 @@ Every unit merges `vitest.shared.ts`, so these hold everywhere:
 - Collection is `test/**/*.test.ts` per unit. `exclude` **replaces** Vitest's default list rather
   than extending it, which is why `**/node_modules/**` and `**/dist/**` are restated there.
 - `vitest.setup.ts` runs for every project and calls `addEqualityTesters()`.
-- Tests import `describe`/`it` from `@effect/vitest`, not from `vitest`.
+- Tests import `describe`/`it` from `@effect/vitest`, not from `vitest`. Assertion helpers come from
+  `@effect/vitest/utils` (`strictEqual`, `deepStrictEqual`, `assertSome`, ...). Swap a layer where the instinct is
+  to mock; assert a failure through `Effect.flip`.
+- `test/**/*.tst.ts` are tstyche type tests, run by `pnpm test:types` and invisible to vitest. `pnpm test:types` is
+  part of the gate beside `check`, `lint` and `test`.
 
 `tsconfig.tests.json` globs `packages/*/test/**/*.ts` and `apps/*/test/**/*.ts`. Its `paths` block
 resolves every workspace package regardless of declared dependencies — deliberately, as the escape
@@ -153,7 +207,7 @@ test importing a package its unit does not depend on. Vitest will.
 
 ## Adding a package
 
-1. Copy `packages/core` to `packages/<name>` and rename it in `package.json` and `<name>.nix`.
+1. Copy `packages/lib` to `packages/<name>` and rename it in `package.json` and `<name>.nix`.
 2. Add `{ "path": "packages/<name>" }` to `tsconfig.packages.json`.
 3. Add `./packages/<name>/<name>.nix` to `imports` in `flake.nix`.
 4. If it has tests importing other workspace packages, add its `paths` entries to
@@ -162,7 +216,11 @@ test importing a package its unit does not depend on. Vitest will.
 That is the whole checklist — `pnpm-workspace.yaml` and `vitest.config.ts` glob `packages/*`
 already.
 
-`packages/core` is a placeholder holding one `Greeting.ts`, to be deleted once real modules land.
+`packages/lib` is the copy source for a new package: one module, one test, and the unit `.nix` in its
+canonical shape. A unit with `workspace:` dependencies also lists each one in its `.nix` (see below)
+and declares the matching `references` in its `tsconfig.json`.
+
+The placeholder tokens a fork renames are exactly four; README.md carries the recipe.
 
 ### Project references are not optional
 
@@ -196,15 +254,22 @@ only on its own closure rather than the whole repo's.
 
 `extraSrcs` lists files explicitly rather than passing a bare directory: a bare directory sweeps
 `node_modules/` and a stale `dist/` into the sandbox, which would silently satisfy `tsc -b`
-incrementality.
+incrementality. A unit with `workspace:` dependencies lists each dependency's package name in
+`pnpmWorkspaces` and its `package.json`, `tsconfig.json` and `src` in `extraSrcs`, because `tsc -b`
+follows the unit's `references` and builds them first; `packages/supabase/supabase.nix` is the
+one-dependency example and `apps/server/server.nix` the three-dependency one.
+
+`buildPnpmPackage` exposes `passthru.nodejs`, the Node the unit was built against, so anything that
+runs a unit's output (the server's NixOS module) takes `package.nodejs` rather than naming a second
+Node attribute.
 
 **Changing dependencies changes the hash.** Set `hash = pkgs.lib.fakeHash;`, run the build, and
 paste the reported hash back in. A stale hash surfaces as `ERR_PNPM_NO_OFFLINE_TARBALL` from inside
 the build; `ERR_PNPM_LOCKFILE_CONFIG_MISMATCH` instead means `pnpm-lock.yaml` is out of sync with
 `pnpm-workspace.yaml`'s catalogs and needs a plain `pnpm install` first.
 
-Working directory inside the derivation mirrors the repo root, so a package at `packages/core`
-builds into `./packages/core/dist`.
+Working directory inside the derivation mirrors the repo root, so a package at `packages/lib`
+builds into `./packages/lib/dist`.
 
 `prepare` runs `effect-tsgo patch`, which patches the TypeScript binary so the Effect
 language-service plugin contributes diagnostics. Nix builds install with `--ignore-scripts`, so

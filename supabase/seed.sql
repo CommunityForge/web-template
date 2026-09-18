@@ -1,0 +1,5 @@
+-- Seed data for `supabase db reset`.
+--
+-- The application's DDL lives in `packages/db/src/migrations` and is applied by Effect's migrator
+-- AFTER a reset, so no `public.*` table exists when this file runs. Seed `auth.*` here if a local
+-- fixture user is wanted; seed application tables from a migration or a program instead.

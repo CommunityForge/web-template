@@ -1,0 +1,14 @@
+{
+  // Static-assets Worker for the built SPA. `nix build .#frontend` from this directory leaves the
+  // bundle at ./result, which is what both deploy.yml and preview.yml upload.
+  "name": "replaceme-frontend",
+  "compatibility_date": "2026-09-01",
+  "assets": {
+    "directory": "./result",
+    // React Router runs in declarative mode; unknown paths must fall back to index.html.
+    "not_found_handling": "single-page-application",
+  },
+  "workers_dev": true,
+  // `wrangler versions upload` (preview.yml) returns a preview URL only while this is on.
+  "preview_urls": true,
+}

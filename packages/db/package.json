@@ -1,9 +1,7 @@
 {
-  "name": "@replaceme/core",
+  "name": "@replaceme/db",
   "version": "0.0.0",
-  "private": true,
-  "description": "Core library",
-  "license": "UNLICENSED",
+  "description": "Postgres client, migrations, and repositories",
   "files": [
     "src/**/*.ts",
     "dist/**/*.js",
@@ -35,15 +33,25 @@
     "build": "tsc -b tsconfig.json && pnpm babel",
     "check": "tsc -b tsconfig.json",
     "coverage": "vitest --coverage",
-    "test": "vitest"
+    "test": "vitest",
+    "test:types": "TSTYCHE_TYPESCRIPT_MODULE=tstyche-typescript tstyche"
   },
   "dependencies": {
+    "@effect/platform-node": "catalog:effect",
+    "@effect/sql-pg": "catalog:effect",
     "effect": "catalog:effect"
   },
   "devDependencies": {
     "@effect/vitest": "catalog:effect",
+    "@replaceme/domain": "workspace:*",
     "@types/node": "catalog:",
+    "ts-morph": "^28.0.0",
+    "tstyche": "catalog:",
+    "tstyche-typescript": "npm:typescript@^5.9.0",
     "typescript": "catalog:",
     "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "@replaceme/domain": "workspace:^"
   }
 }

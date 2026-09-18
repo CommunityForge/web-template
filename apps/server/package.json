@@ -1,0 +1,28 @@
+{
+  "name": "@replaceme/server",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The HTTP API server",
+  "type": "module",
+  "sideEffects": [],
+  "scripts": {
+    "build": "tsc -b tsconfig.json",
+    "check": "tsc -b tsconfig.json",
+    "coverage": "vitest --coverage",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@effect/platform-node": "catalog:effect",
+    "@replaceme/db": "workspace:*",
+    "@replaceme/domain": "workspace:*",
+    "@replaceme/supabase": "workspace:*",
+    "effect": "catalog:effect",
+    "jose": "^6.2.3"
+  },
+  "devDependencies": {
+    "@effect/vitest": "catalog:effect",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

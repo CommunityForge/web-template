@@ -10,6 +10,7 @@
     "lint": "oxlint --type-aware --disable-nested-config",
     "lint:fix": "oxlint --type-aware --fix --disable-nested-config",
     "test": "vitest",
+    "test:types": "pnpm --recursive --if-present run test:types",
     "coverage": "vitest --coverage",
     "prepare": "effect-tsgo patch"
   },
@@ -23,6 +24,7 @@
     "babel-plugin-annotate-pure-calls": "^0.5.0",
     "effect": "catalog:effect",
     "glob": "^13.0.6",
+    "tsx": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }

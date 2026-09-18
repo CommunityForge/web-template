@@ -1,0 +1,49 @@
+{
+  "name": "@replaceme/lib",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Core library",
+  "license": "UNLICENSED",
+  "files": [
+    "src/**/*.ts",
+    "dist/**/*.js",
+    "dist/**/*.js.map",
+    "dist/**/*.d.ts",
+    "dist/**/*.d.ts.map"
+  ],
+  "type": "module",
+  "sideEffects": [],
+  "exports": {
+    "./package.json": "./package.json",
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts",
+    "./*/index": null,
+    "./internal/*": null
+  },
+  "publishConfig": {
+    "exports": {
+      "./package.json": "./package.json",
+      ".": "./dist/index.js",
+      "./*": "./dist/*.js",
+      "./*/index": null,
+      "./internal/*": null
+    },
+    "access": "public"
+  },
+  "scripts": {
+    "babel": "babel dist --plugins annotate-pure-calls --out-dir dist --source-maps",
+    "build": "tsc -b tsconfig.json && pnpm babel",
+    "check": "tsc -b tsconfig.json",
+    "coverage": "vitest --coverage",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "effect": "catalog:effect"
+  },
+  "devDependencies": {
+    "@effect/vitest": "catalog:effect",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
