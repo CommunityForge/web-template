@@ -20,7 +20,7 @@ _: {
       packages.db = buildPnpmPackage {
         # Set to `pkgs.lib.fakeHash` when dependencies change; the failing build prints the
         # real hash to paste back in.
-        hash = "sha256-SGgyG5ZqWnxc2cGcRGeBbOWDKAjp52w8STsaKaXR17U=";
+        hash = "sha256-copuGAh6IF/2H1lEKd0jv6VnXBhhm3avjSFXywMiSq0=";
         packageJsonPath = ./package.json;
         # The unit and its one workspace dependency: `tsc -b` builds the referenced project
         # first, so its sources have to be in the sandbox too.
@@ -34,6 +34,7 @@ _: {
         extraSrcs = fs.unions [
           ./package.json
           ./tsconfig.json
+          ./vitest.config.ts
           ./scripts
           ./src
           ./test
@@ -54,6 +55,7 @@ _: {
         checkPhase = ''
           runHook preCheck
           pnpm --filter=@replaceme/db check
+          pnpm --filter=@replaceme/db test --run
           pnpm --filter=@replaceme/db test:types
           # `--disable-nested-config` stops oxlint discovering `.repos/effect/.oxlintrc.json`,
           # which declares a JS plugin that is not installed.

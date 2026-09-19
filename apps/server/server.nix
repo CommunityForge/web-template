@@ -21,7 +21,7 @@
       packages.server = buildPnpmPackage {
         # Set to `pkgs.lib.fakeHash` when dependencies change; the failing build prints the
         # real hash to paste back in.
-        hash = "sha256-E9WxJs6nyh4jUR56dY1aghmH486NosG3ehZgV8SkJp8=";
+        hash = "sha256-eyE4EZpQ8gVnhHbFDCY3ZSJT7JxR9OOfSyJwQZDzqlg=";
         packageJsonPath = ./package.json;
         # The app and its workspace dependency closure: `tsc -b` follows the app's `references`,
         # so every referenced project's sources have to be in the sandbox.

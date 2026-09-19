@@ -7,3 +7,7 @@
 	path = .repos/openspec-schemas
 	url = https://github.com/JiangWay/openspec-schemas
 	shallow = true
+
+[submodule ".repos/effect"]
+	path = .repos/effect
+	url = git@github.com:Effect-TS/effect

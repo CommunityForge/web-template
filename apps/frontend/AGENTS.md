@@ -81,11 +81,9 @@ these are their React and Atom consequences:
   `initialEntries` is `["/"]`; hoist any override to module scope, per `jsx-no-new-array-as-prop`.
 - **Use `.tsx` for tests.** Root `tsconfig.tests.json` globs `apps/*/test/**/*.ts` only, so a `.tsx`
   test is owned solely by this unit's `tsconfig.app.json` and cannot end up in two projects.
-- **`localStorage` works only because of `execArgv`.** Node >= 25 ships a `globalThis.localStorage`
-  that shadows happy-dom's, and Vitest 4 drops any window key already present on the global, so
-  `vitest.config.ts` passes `--no-experimental-webstorage`. Remove it and every storage-backed atom
-  silently reads `undefined`. happy-dom's `Storage` is per-`Window`, hence fresh per test file --
-  do not assume that if the flag is ever swapped for `--localstorage-file`, which is process-wide.
+- **`localStorage` in tests is happy-dom's.** Its `Storage` is per-`Window`, hence fresh per test
+  file. Never pass Node's `--localstorage-file` to the test runner: that storage is process-wide and
+  would shadow happy-dom's, leaking state across files.
 
 ## Dependencies and Nix
 

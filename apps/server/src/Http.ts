@@ -36,7 +36,7 @@ const withLogAddress = <A, E, R>(layer: Layer.Layer<A, E, R>): Layer.Layer<A, E,
  * than squatting on a guessed one.
  */
 const ServerLive = NodeHttpServer.layerConfig(createServer, {
-  port: Config.number("API_PORT"),
+  port: Config.Port("API_PORT"),
 })
 
 /**
@@ -45,7 +45,7 @@ const ServerLive = NodeHttpServer.layerConfig(createServer, {
  * surfaced at startup than papered over.
  */
 const LoggerLive = Layer.unwrap(
-  Effect.map(Config.logLevel("LOG_LEVEL"), (level) => Layer.succeed(References.MinimumLogLevel, level)),
+  Effect.map(Config.LogLevel("LOG_LEVEL"), (level) => Layer.succeed(References.MinimumLogLevel, level)),
 )
 
 /**
@@ -66,10 +66,10 @@ export const ApiLive = HttpApiBuilder.layer(Api.Http).pipe(
  * The origins allowed to call this API, read from `APP_ORIGINS` as a comma-separated list.
  *
  * `HttpMiddleware.cors()` with no options allows every origin, which is what would let any page drive an authenticated
- * endpoint with a token it managed to read. `Config.Array` is the schema handed to `Config.schema`, not a `Config`
- * constructor. No default: an unset `APP_ORIGINS` should stop the server, not quietly reopen it.
+ * endpoint with a token it managed to read. No default: an unset `APP_ORIGINS` should stop the server, not quietly
+ * reopen it.
  */
-const AllowedOrigins: Config.Config<ReadonlyArray<string>> = Config.schema(Config.Array(Schema.String), "APP_ORIGINS")
+const AllowedOrigins: Config.Config<ReadonlyArray<string>> = Config.Array(Schema.String, "APP_ORIGINS")
 
 /**
  * @since 0.0.0

@@ -8,7 +8,7 @@ _: {
       packages.domain = buildPnpmPackage {
         # Set to `pkgs.lib.fakeHash` when dependencies change; the failing build prints the
         # real hash to paste back in.
-        hash = "sha256-qwlaFdysxSN9+cE6e958I9AY5n4oNnxggAJeKLFwHTM=";
+        hash = "sha256-9bcoU1YiTDjkPCixTw6U0RAxnHOpDnvwzaBLPf7Z7Ls=";
         packageJsonPath = ./package.json;
         pnpmWorkspaces = [ "@replaceme/domain" ];
         # Explicit rather than `fs.unions [ ./. ]`: a bare directory sweeps node_modules/,

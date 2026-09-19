@@ -47,9 +47,9 @@ service, its repository, a store client no one else uses) sits on that group's l
 
 A layer whose SHAPE depends on configuration is `Layer.unwrap` of an effect that reads the config and returns the
 layer (`LoggerLive`, `HttpLive`). A layer whose VALUES come from configuration takes a `Config` in its options
-(`NodeHttpServer.layerConfig(createServer, { port: Config.number("API_PORT") })`). Neither takes a plain argument. A
-comma-separated variable is `Config.schema(Config.Array(Schema.String), "APP_ORIGINS")`: `Config.Array` is the schema
-handed to `Config.schema`, not a `Config` constructor.
+(`NodeHttpServer.layerConfig(createServer, { port: Config.Port("API_PORT") })`). Neither takes a plain argument. A
+comma-separated variable is `Config.Array(Schema.String, "APP_ORIGINS")`: `Config.Array` is a `Config` constructor
+taking the item schema and the path, and the older `Config.schema(Config.Array(...))` form no longer type-checks.
 
 ## Shape of a feature
 
