@@ -1,0 +1,36 @@
+name: Wrangler config
+description: >-
+  Derive the wrangler config a deploy or version upload uses from the tracked `wrangler.json`,
+  binding a Hyperdrive when an id is given. The tracked file carries nothing account-specific,
+  so a fork never edits it; the id arrives from a GitHub variable and is spliced in here.
+
+inputs:
+  working-directory:
+    description: The directory holding `wrangler.json`; the generated file is written beside it so its relative paths keep resolving
+    required: true
+  hyperdrive-id:
+    description: The Hyperdrive config id to bind as `HYPERDRIVE`; empty binds nothing and the Worker falls back to its `DB_URL` var
+    required: false
+    default: ""
+
+outputs:
+  path:
+    description: The generated config, relative to the working directory
+    value: ${{ steps.generate.outputs.path }}
+
+runs:
+  using: composite
+  steps:
+    - id: generate
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        HYPERDRIVE_ID: ${{ inputs.hyperdrive-id }}
+      run: |
+        if [ -n "$HYPERDRIVE_ID" ]; then
+          jq --arg id "$HYPERDRIVE_ID" '. + { hyperdrive: [{ binding: "HYPERDRIVE", id: $id }] }' \
+            wrangler.json > wrangler.generated.json
+        else
+          cp wrangler.json wrangler.generated.json
+        fi
+        echo "path=wrangler.generated.json" >> "$GITHUB_OUTPUT"

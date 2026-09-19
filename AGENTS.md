@@ -29,18 +29,19 @@ oxfmt, tsgolint and typos all come from Nix rather than npm, so there is one sou
 tool versions and no native postinstall to run inside the build sandbox. Consequently there is no
 `packageManager` field and no `.nvmrc`.
 
-| Command              | What it does                                                             |
-| -------------------- | ------------------------------------------------------------------------ |
-| `pnpm check`         | `tsc -b tsconfig.json` — type-checks the whole graph, sources and tests  |
-| `pnpm build`         | Builds every unit's `dist/` (`tsc -b`, then Babel for `/*#__PURE__*/`)   |
-| `pnpm test`          | Vitest across all workspace units                                        |
-| `pnpm test:types`    | tstyche type tests (`test/**/*.tst.ts`) in every unit that has them      |
-| `pnpm coverage`      | Same, with v8 coverage                                                   |
-| `pnpm lint`          | oxlint, including the type-aware tsgolint pass                           |
-| `pnpm clean`         | Removes `dist/`, `coverage/`, `*.tsbuildinfo`                            |
-| `nix fmt`            | treefmt — see "Formatting" below for what it actually covers             |
-| `nix flake check`    | `formatting`, `spellcheck` (typos)                                       |
-| `nix build .#<unit>` | Reproducible build of one unit; its `checkPhase` re-runs check/test/lint |
+| Command                     | What it does                                                             |
+| --------------------------- | ------------------------------------------------------------------------ |
+| `pnpm check`                | `tsc -b tsconfig.json` — type-checks the whole graph, sources and tests  |
+| `pnpm build`                | Builds every unit's `dist/` (`tsc -b`, then Babel for `/*#__PURE__*/`)   |
+| `pnpm test`                 | Vitest across all workspace units                                        |
+| `pnpm test:types`           | tstyche type tests (`test/**/*.tst.ts`) in every unit that has them      |
+| `pnpm coverage`             | Same, with v8 coverage                                                   |
+| `pnpm lint`                 | oxlint, including the type-aware tsgolint pass                           |
+| `pnpm clean`                | Removes `dist/`, `coverage/`, `*.tsbuildinfo`                            |
+| `nix fmt`                   | treefmt — see "Formatting" below for what it actually covers             |
+| `nix flake check`           | `formatting`, `spellcheck` (typos)                                       |
+| `nix build .#<unit>`        | Reproducible build of one unit; its `checkPhase` re-runs check/test/lint |
+| `nix build .#server-worker` | The deployable Worker: `worker.js` beside the frontend's `assets/`       |
 
 ### Formatting
 
@@ -69,14 +70,14 @@ supabase/                Supabase CLI project: `config.toml`, `seed.sql` (auth.*
 
 The units, each with an `AGENTS.md` recording only what is specific to it:
 
-| Unit                | Is                                                                             |
-| ------------------- | ------------------------------------------------------------------------------ |
-| `packages/lib`      | The copy source for a new package: one module, one test, the unit `.nix` shape |
-| `packages/domain`   | The contracts a client and the server agree on; depends on `effect` alone      |
-| `packages/db`       | Postgres client, DDL, exposure audit, repositories, and the tstyche drift gate |
-| `packages/supabase` | Effect bindings for `supabase-js`: client, `Auth` adapter, claim decoding      |
-| `apps/frontend`     | Vite + React SPA, a bundler-built leaf                                         |
-| `apps/server`       | The HTTP API implementing `domain`; `tsc`-emitting Node app                    |
+| Unit                | Is                                                                                                                |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `packages/lib`      | The copy source for a new package: one module, one test, the unit `.nix` shape                                    |
+| `packages/domain`   | The contracts a client and the server agree on; depends on `effect` alone                                         |
+| `packages/db`       | Postgres client, DDL, exposure audit, repositories, and the tstyche drift gate                                    |
+| `packages/supabase` | Effect bindings for `supabase-js`: client, `Auth` adapter, claim decoding                                         |
+| `apps/frontend`     | Vite + React SPA, a bundler-built leaf                                                                            |
+| `apps/server`       | The HTTP API implementing `domain`: a `tsc`-emitting Node app and the Cloudflare Worker serving the SPA beside it |
 
 `tsconfig.base.json` uses `${configDir}` templating, which is why every leaf tsconfig is six lines
 with no path overrides.
@@ -243,7 +244,10 @@ resolves workspace dependencies itself, so leave it out of `tsconfig.apps.json`'
 For a `tsc`-emitting Node app, treat it exactly like a package and add it to `tsconfig.apps.json`.
 Be aware that `pnpm deploy` does **not** apply `publishConfig`, so a deployed app's copy of a
 workspace dependency keeps its source-first `exports` and will fail at runtime with
-`ERR_MODULE_NOT_FOUND`. Bundle the app, or rewrite the manifests on the way out.
+`ERR_MODULE_NOT_FOUND`. Bundle the app, or rewrite the manifests on the way out. `apps/server` does
+the former for its Worker entry point: `esbuild` is a devDependency of that unit (through the root
+`catalog:`, pinned to the esbuild Vite already resolves) rather than a dev-shell tool, because it is
+a build input of one unit and not something a human runs.
 
 ## Nix builds
 
@@ -262,6 +266,11 @@ one-dependency example and `apps/server/server.nix` the three-dependency one.
 `buildPnpmPackage` exposes `passthru.nodejs`, the Node the unit was built against, so anything that
 runs a unit's output (the server's NixOS module) takes `package.nodejs` rather than naming a second
 Node attribute.
+
+A unit may compose another unit's OUTPUT in Nix without depending on it in pnpm:
+`packages.server-worker` in `apps/server/server.nix` is a `runCommand` over `packages.server` and
+`packages.frontend`. That keeps the frontend a bundler leaf while giving the deploy one directory
+to upload. `checks` includes every package, composed ones too.
 
 **Changing dependencies changes the hash.** Set `hash = pkgs.lib.fakeHash;`, run the build, and
 paste the reported hash back in. A stale hash surfaces as `ERR_PNPM_NO_OFFLINE_TARBALL` from inside

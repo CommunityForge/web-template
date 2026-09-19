@@ -125,9 +125,12 @@
           checks = config.packages // {
             actionlint =
               let
+                # The whole `.github` tree, not just the workflows: actionlint resolves a
+                # `uses: ./.github/actions/<name>` against the local action's metadata to check
+                # the `with:` keys a workflow passes it.
                 workflows = pkgs.lib.fileset.toSource {
                   root = ./.;
-                  fileset = ./.github/workflows;
+                  fileset = ./.github;
                 };
               in
               pkgs.runCommand "actionlint"

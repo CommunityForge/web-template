@@ -1,6 +1,6 @@
 import * as NodeRuntime from "@effect/platform-node/NodeRuntime"
 import * as Layer from "effect/Layer"
 
-import { HttpLive } from "./Http.js"
+import * as Node from "./Node.js"
 
-Layer.launch(HttpLive).pipe(NodeRuntime.runMain)
+Layer.launch(Node.HttpLive).pipe(NodeRuntime.runMain)

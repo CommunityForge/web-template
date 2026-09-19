@@ -1,7 +1,12 @@
 { self, ... }:
 {
   perSystem =
-    { pkgs, buildPnpmPackage, ... }:
+    {
+      config,
+      pkgs,
+      buildPnpmPackage,
+      ...
+    }:
     let
       fs = pkgs.lib.fileset;
       PUBLIC_SUPABASE_URL = "http://127.0.0.1:54321";
@@ -69,20 +74,30 @@
           oxlint --type-aware --disable-nested-config apps/server
           runHook postCheck
         '';
-        # The compiled app, its sources and manifest -- the same shape the packages ship. What this
-        # build proves is that the server -> db -> domain -> supabase chain compiles and passes its
-        # checks; it is not a runnable deployment. `pnpm deploy` would be the runnable shape, and
-        # pnpm 10 re-resolves the graph against the registry to produce it, which the sandbox has
-        # no access to. Bundle the app, or rewrite the manifests on the way out, when a deployment
-        # artifact is needed.
+        # The compiled app, its sources and manifest -- the same shape the packages ship -- plus
+        # `worker.js`, the Worker bundle `build` emits into `build/`. `dist/` is not a runnable
+        # deployment: it ships without `node_modules`, and `pnpm deploy` (the shape that would run)
+        # re-resolves against the registry, which the sandbox cannot reach. `worker.js` IS
+        # runnable: one self-contained module importing only `node:*`, which is what
+        # `server-worker` below composes into the deployable directory.
         installPhase = ''
           runHook preInstall
           mkdir -p $out
-          cp -r ./apps/server/dist ./apps/server/src ./apps/server/package.json $out/
+          cp -r ./apps/server/dist ./apps/server/src ./apps/server/package.json ./apps/server/build/worker.js $out/
           runHook postInstall
         '';
         doDist = false;
       };
+
+      # The directory `wrangler.json` deploys: the API bundle beside the SPA's static assets, so one
+      # Worker serves both from one origin. This is the ONE place the server unit depends on the
+      # frontend, and it is Nix-only -- pnpm never links the two, so the frontend stays a bundler
+      # leaf. `checks` picks this up with every other package.
+      packages.server-worker = pkgs.runCommand "replaceme-server-worker" { } ''
+        mkdir -p $out
+        cp ${config.packages.server}/worker.js $out/worker.js
+        cp -r ${config.packages.frontend} $out/assets
+      '';
 
       apps = {
         server-dev = {
@@ -107,6 +122,37 @@
             '';
           };
         };
+        # The Worker shape, locally: the bundle rebuilt on every source change, served by wrangler
+        # beside the SPA from the last Nix build. `server-dev` stays the primary loop; this one is
+        # for smoke-testing what only the Worker runtime shows (request-scoped I/O, asset routing).
+        server-worker-dev = {
+          type = "app";
+          meta.description = "Run the Worker locally with wrangler, rebuilding the bundle on source changes";
+          program = pkgs.writeShellApplication {
+            name = "server-worker-dev";
+            runtimeInputs = [ pkgs.wrangler ];
+            text = ''
+              root="$(git rev-parse --show-toplevel)"
+              cd "$root/apps/server"
+              pnpm install
+              # `./result/assets` is what wrangler.json serves. The bundle beside it is the last
+              # build's; the watcher below writes a fresh one to ./build/worker.js, which is the
+              # script wrangler is told to run instead of the config's `main`.
+              nix build "$root#server-worker" --out-link result
+              pnpm run build:worker --watch &
+              watcher=$!
+              trap 'kill "$watcher"' EXIT
+              # No Hyperdrive locally, so `DB_URL` is the whole database configuration: local
+              # Supabase's Postgres, the same values `server-dev` exports one by one.
+              wrangler dev ./build/worker.js \
+                --config wrangler.json \
+                --var "PUBLIC_SUPABASE_URL:${PUBLIC_SUPABASE_URL}" \
+                --var "APP_ORIGINS:${APP_ORIGINS}" \
+                --var "LOG_LEVEL:''${LOG_LEVEL:-Info}" \
+                --var "DB_URL:postgres://${DB_USER}:${DB_PASSWD}@${DB_HOST}:${DB_PORT}/${DB_DATABASE}"
+            '';
+          };
+        };
         server-check-watch = {
           type = "app";
           meta.description = "Type-check the server in watch mode";
@@ -121,6 +167,9 @@
       };
     };
 
+  # A systemd unit around `dist/main.js`, for a host that runs the Node entry point. It is NOT the
+  # deploy path for Cloudflare: that is `packages.server-worker` plus `wrangler.json`, driven from
+  # GitHub Actions.
   flake.nixosModules.server =
     {
       lib,

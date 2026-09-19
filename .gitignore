@@ -18,6 +18,10 @@ npm-debug.log*
 .DS_Store
 *.pem
 
+# cloudflare worker: the wrangler config CI derives from the tracked one
+apps/server/wrangler.generated.json
+apps/server/.wrangler
+
 # nix
 .direnv/
 result

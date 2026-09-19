@@ -6,7 +6,8 @@
   "type": "module",
   "sideEffects": [],
   "scripts": {
-    "build": "tsc -b tsconfig.json",
+    "build": "tsc -b tsconfig.json && pnpm run build:worker",
+    "build:worker": "esbuild src/Worker.ts --bundle --format=esm --platform=neutral --target=es2022 --external:node:* --external:cloudflare:* --outfile=build/worker.js",
     "check": "tsc -b tsconfig.json",
     "coverage": "vitest --coverage",
     "test": "vitest"
@@ -22,6 +23,7 @@
   "devDependencies": {
     "@effect/vitest": "catalog:effect",
     "@types/node": "catalog:",
+    "esbuild": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }

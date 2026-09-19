@@ -93,6 +93,8 @@ pinned with ordinary ranges here — intentional.
 `nix build .#frontend` emits the static bundle to `$out`; its `checkPhase` runs `check`,
 `test --run` and `oxlint --type-aware`.
 
-- **`wrangler.jsonc` carries no Worker `name` ON PURPOSE.** The deploy and preview workflows pass
-  it with `--name` from the `CLOUDFLARE_WORKER_NAME` GitHub variable, so a fork never edits the
-  file. The absent name is the contract; keep it absent.
+This unit deploys nothing on its own. `packages.server-worker` (in `apps/server/server.nix`)
+copies this unit's `$out` to `assets/` beside the API's Worker bundle, and `apps/server/wrangler.json`
+serves that directory with the SPA fallback. The dependency is Nix-only: nothing in pnpm links the
+two, so this stays a bundler leaf. The API is reachable at `/api/*` on the same origin, so no
+production base URL or CORS is needed from here.

@@ -8,6 +8,8 @@ packages:
 catalog:
   "@types/node": ^25.9.5
   "@vitest/coverage-v8": 5.0.1
+  # Pinned to the esbuild Vite already resolves, so the tree carries one esbuild.
+  esbuild: 0.28.2
   tstyche: 7.2.3
   tsx: ^4.20.0
   typescript: 7.0.2

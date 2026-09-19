@@ -90,3 +90,27 @@ export const config = {
  * @category layers
  */
 export const PgLive = PgClient.layerConfig(config)
+
+/**
+ * The single-variable form: one `DB_URL` connection string, as a pooler or a connection proxy hands it out.
+ *
+ * @since 0.0.0
+ * @category config
+ */
+export const urlConfig = {
+  url: Config.Redacted("DB_URL"),
+  types: Config.succeed(types),
+} as const
+
+/**
+ * Provides `SqlClient` (and `PgClient`) against the Postgres `DB_URL` names.
+ *
+ * Prepared statements stay NAMED here, exactly as in `PgLive`. The string therefore has to point at something that
+ * preserves them across statements on one connection: a SESSION-mode pooler or a connection proxy that pins the
+ * backend, never a transaction-mode pooler (Supabase's port 6543), which would answer a later statement from a
+ * different backend that never saw the `PREPARE`.
+ *
+ * @since 0.0.0
+ * @category layers
+ */
+export const PgUrlLive = PgClient.layerConfig(urlConfig)

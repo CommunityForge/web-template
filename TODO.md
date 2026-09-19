@@ -56,6 +56,7 @@
   - [x] Flake checks
 - [ ] Choose between staging and blue/green for human-in-the-loop testing
 - [x] Static SPA export for agnostic hosting
+- [x] Server hosting: the API runs in the same Cloudflare Worker as the SPA, Postgres via Hyperdrive
 
 ## Late Game
 

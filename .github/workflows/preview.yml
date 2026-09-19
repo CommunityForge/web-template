@@ -20,38 +20,71 @@ jobs:
       id-token: write
       pull-requests: write
     steps:
-      - name: Require the Worker name
-        if: vars.CLOUDFLARE_WORKER_NAME == ''
-        run: echo "::error::Set the repository variable CLOUDFLARE_WORKER_NAME to the Worker's name (Settings → Secrets and variables → Actions → Variables)" && exit 1
+      - name: Require the preview settings
+        env:
+          WORKER_NAME: ${{ vars.CLOUDFLARE_WORKER_NAME }}
+          APP_ORIGINS: ${{ vars.APP_ORIGINS }}
+          LOG_LEVEL: ${{ vars.LOG_LEVEL }}
+          PREVIEW_SUPABASE_URL: ${{ vars.PREVIEW_SUPABASE_URL }}
+          PREVIEW_DB_URL: ${{ secrets.PREVIEW_DB_URL }}
+        run: |
+          where="(Settings → Secrets and variables → Actions)"
+          [ -n "$WORKER_NAME" ] || { echo "::error::Set the repository variable CLOUDFLARE_WORKER_NAME to the Worker's name $where" && exit 1; }
+          [ -n "$APP_ORIGINS" ] || { echo "::error::Set the repository variable APP_ORIGINS to the comma-separated origins allowed to call the API $where" && exit 1; }
+          [ -n "$LOG_LEVEL" ] || { echo "::error::Set the repository variable LOG_LEVEL to an Effect log level such as Info $where" && exit 1; }
+          # A preview version inherits the production config, Hyperdrive binding included. These two
+          # are what keep it off production data: the Worker reads DB_URL before the binding, so an
+          # unset value here would silently point the preview at production. Fail instead.
+          [ -n "$PREVIEW_SUPABASE_URL" ] || { echo "::error::Set the repository variable PREVIEW_SUPABASE_URL to the Supabase branch's project URL $where" && exit 1; }
+          [ -n "$PREVIEW_DB_URL" ] || { echo "::error::Set the repository secret PREVIEW_DB_URL to the Supabase branch's session-pooler connection string $where" && exit 1; }
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
       - name: Build
-        working-directory: apps/frontend
-        run: nix build "$GITHUB_WORKSPACE#frontend"
+        working-directory: apps/server
+        run: nix build "$GITHUB_WORKSPACE#server-worker"
+      - name: Wrangler config
+        id: config
+        uses: ./.github/actions/wrangler-config
+        with:
+          working-directory: apps/server
+          hyperdrive-id: ${{ vars.CLOUDFLARE_HYPERDRIVE_ID }}
       - name: Upload preview version
         id: upload
-        working-directory: apps/frontend
+        working-directory: apps/server
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           # Wrangler appends one JSON object per line here; the version-upload record carries the
           # preview URLs, which is sturdier than scraping them out of the human-readable log.
           WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/wrangler-output.ndjson
+          CONFIG: ${{ steps.config.outputs.path }}
           WORKER_NAME: ${{ vars.CLOUDFLARE_WORKER_NAME }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          APP_ORIGINS: ${{ vars.APP_ORIGINS }}
+          LOG_LEVEL: ${{ vars.LOG_LEVEL }}
+          PREVIEW_SUPABASE_URL: ${{ vars.PREVIEW_SUPABASE_URL }}
+          PREVIEW_DB_URL: ${{ secrets.PREVIEW_DB_URL }}
         run: |
           # A version only gets a preview URL while the Worker itself has Preview URLs switched on.
           # `versions upload` reads that switch but never sets it; `triggers deploy` applies the
-          # `workers_dev`/`preview_urls` settings from wrangler.jsonc, so a Worker created by hand
-          # in the dashboard needs no manual toggle.
-          nix run nixpkgs#wrangler -- triggers deploy --name "$WORKER_NAME"
+          # `workers_dev`/`preview_urls` settings from the config, so a Worker created by hand in
+          # the dashboard needs no manual toggle.
+          nix run nixpkgs#wrangler -- triggers deploy --config "$CONFIG" --name "$WORKER_NAME"
+          # The branch's connection string travels as a secret, never a var, so it shows in neither
+          # the dashboard nor this log.
+          jq -n --arg url "$PREVIEW_DB_URL" '{ DB_URL: $url }' > "$RUNNER_TEMP/secrets.json"
           # `pr-<n>` is a stable alias, so the URL stays the same across pushes to the same PR.
           nix run nixpkgs#wrangler -- versions upload \
+            --config "$CONFIG" \
             --name "$WORKER_NAME" \
             --preview-alias "pr-${PR_NUMBER}" \
             --tag "${GITHUB_SHA::7}" \
-            --message "Pull request #${PR_NUMBER} at ${GITHUB_SHA::7}"
+            --message "Pull request #${PR_NUMBER} at ${GITHUB_SHA::7}" \
+            --var "PUBLIC_SUPABASE_URL:$PREVIEW_SUPABASE_URL" \
+            --var "APP_ORIGINS:$APP_ORIGINS" \
+            --var "LOG_LEVEL:$LOG_LEVEL" \
+            --secrets-file "$RUNNER_TEMP/secrets.json"
           url=$(jq -r 'select(.type == "version-upload") | .preview_alias_url // .preview_url // empty' \
             "$WRANGLER_OUTPUT_FILE_PATH")
           if [ -z "$url" ]; then

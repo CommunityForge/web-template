@@ -1,10 +1,13 @@
 /**
- * The composition root: one `HttpLive` layer that serves the API the domain declares.
+ * The portable half of the composition root: the API the domain declares, CORS around it, and the logger. Nothing here
+ * names a runtime. `Node.ts` binds this to a listening port; `Worker.ts` turns it into a `fetch` handler.
+ *
+ * This module and everything it imports MUST stay free of `node:*` and `@effect/platform-node`: the Worker bundle is
+ * built from it, and a Node import here would land in that bundle.
  *
  * @since 0.0.0
  */
 
-import * as NodeHttpServer from "@effect/platform-node/NodeHttpServer"
 import * as Api from "@replaceme/domain/Api"
 import * as Config from "effect/Config"
 import * as Effect from "effect/Effect"
@@ -13,53 +16,21 @@ import * as References from "effect/References"
 import * as Schema from "effect/Schema"
 import * as HttpMiddleware from "effect/unstable/http/HttpMiddleware"
 import * as HttpRouter from "effect/unstable/http/HttpRouter"
-import * as HttpServer from "effect/unstable/http/HttpServer"
 import * as HttpApiBuilder from "effect/unstable/httpapi/HttpApiBuilder"
 import * as HttpApiSwagger from "effect/unstable/httpapi/HttpApiSwagger"
-import { createServer } from "node:http"
 
-import { AuthLive } from "./Auth.js"
 import * as TopLevelHttp from "./TopLevel/Http.js"
-
-const withLogAddress = <A, E, R>(layer: Layer.Layer<A, E, R>): Layer.Layer<A, E, R | HttpServer.HttpServer> =>
-  Layer.effectDiscard(
-    HttpServer.addressFormattedWith((address) =>
-      Effect.annotateLogs(Effect.logInfo(`Listening on: ${address}`), {
-        docs: `${address}/docs`,
-        "openapi.json": `${address}/openapi.json`,
-      }),
-    ),
-  ).pipe(Layer.provideMerge(layer))
-
-/**
- * No default: every launcher names its port, so an unset `API_PORT` is a broken deployment that refuses to start rather
- * than squatting on a guessed one.
- */
-const ServerLive = NodeHttpServer.layerConfig(createServer, {
-  port: Config.Port("API_PORT"),
-})
 
 /**
  * `LOG_LEVEL` rather than a literal. Debug on a server that handles bearer tokens widens what a log aggregator ends up
  * holding, so the level is a deployment choice. No default: a missing one is a misconfigured environment better
  * surfaced at startup than papered over.
- */
-const LoggerLive = Layer.unwrap(
-  Effect.map(Config.LogLevel("LOG_LEVEL"), (level) => Layer.succeed(References.MinimumLogLevel, level)),
-)
-
-/**
- * The API the domain declares, with every group's handlers provided and Swagger mounted at `/docs`.
- *
- * Coverage is type-checked: `HttpApiBuilder.layer(Api.Http)` requires the handler service of every group in the
- * `HttpApi`, so a group added to the contract and not provided here is an unsatisfied requirement `tsc -b` reports.
  *
  * @since 0.0.0
  * @category layers
  */
-export const ApiLive = HttpApiBuilder.layer(Api.Http).pipe(
-  Layer.provide(TopLevelHttp.HttpTopLevelLive),
-  Layer.provide(HttpApiSwagger.layer(Api.Http)),
+export const LoggerLive: Layer.Layer<never, Config.ConfigError> = Layer.unwrap(
+  Effect.map(Config.LogLevel("LOG_LEVEL"), (level) => Layer.succeed(References.MinimumLogLevel, level)),
 )
 
 /**
@@ -68,19 +39,46 @@ export const ApiLive = HttpApiBuilder.layer(Api.Http).pipe(
  * `HttpMiddleware.cors()` with no options allows every origin, which is what would let any page drive an authenticated
  * endpoint with a token it managed to read. No default: an unset `APP_ORIGINS` should stop the server, not quietly
  * reopen it.
+ *
+ * @since 0.0.0
+ * @category config
  */
-const AllowedOrigins: Config.Config<ReadonlyArray<string>> = Config.Array(Schema.String, "APP_ORIGINS")
+export const AllowedOrigins: Config.Config<ReadonlyArray<string>> = Config.Array(Schema.String, "APP_ORIGINS")
 
 /**
+ * The CORS policy over `AllowedOrigins`, installed on the router as GLOBAL middleware so it runs around every route.
+ *
+ * A router middleware, not the `middleware` option of `HttpRouter.serve` / `toWebHandler`: that option wraps the whole
+ * chain INCLUDING the send, so headers a middleware adds there never reach the client. CORS adds headers.
+ *
  * @since 0.0.0
  * @category layers
  */
-export const HttpLive = Layer.unwrap(
-  Effect.gen(function* () {
-    const allowedOrigins = yield* AllowedOrigins
-
-    return HttpRouter.serve(ApiLive, {
-      middleware: HttpMiddleware.cors({ allowedOrigins, credentials: false }),
-    })
+export const CorsLive = HttpRouter.middleware(
+  Effect.map(AllowedOrigins, (allowedOrigins) => {
+    const cors = HttpMiddleware.cors({ allowedOrigins, credentials: false })
+    return (app) => cors(app)
   }),
-).pipe(withLogAddress, Layer.provide(ServerLive), Layer.provide(AuthLive), Layer.provide(LoggerLive))
+  { global: true },
+)
+
+/**
+ * The API the domain declares, with every group's handlers provided, CORS around every route, the OpenAPI document at
+ * `/api/openapi.json` and Swagger at `/api/docs`. The two documents sit beside the contract's `/api` prefix rather than
+ * under it: the builder mounts them on the router directly, so the prefix is spelled here.
+ *
+ * Coverage is type-checked: `HttpApiBuilder.layer(Api.Http)` requires the handler service of every group in the
+ * `HttpApi`, so a group added to the contract and not provided here is an unsatisfied requirement `tsc -b` reports.
+ *
+ * The Swagger layer inlines its UI, about a megabyte of JavaScript, into every build that carries this layer.
+ *
+ * @since 0.0.0
+ * @category layers
+ */
+export const ApiLive = Layer.mergeAll(
+  HttpApiBuilder.layer(Api.Http, { openapiPath: "/api/openapi.json" }).pipe(
+    Layer.provide(TopLevelHttp.HttpTopLevelLive),
+    Layer.provide(HttpApiSwagger.layer(Api.Http, { path: "/api/docs" })),
+  ),
+  CorsLive,
+)

@@ -12,6 +12,9 @@ catalogs:
     '@vitest/coverage-v8':
       specifier: 5.0.1
       version: 5.0.1
+    esbuild:
+      specifier: 0.28.2
+      version: 0.28.2
     tstyche:
       specifier: 7.2.3
       version: 7.2.3
@@ -221,6 +224,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 25.9.5
+      esbuild:
+        specifier: 'catalog:'
+        version: 0.28.2
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
