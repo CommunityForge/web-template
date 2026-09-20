@@ -111,6 +111,7 @@
             pkgs.nil
             pkgs.nixd
             pkgs.vscode-langservers-extracted
+            pkgs.wrangler
           ];
         in
         {
