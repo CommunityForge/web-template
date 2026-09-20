@@ -66,7 +66,7 @@ jobs:
                 exit 0
                 ;;
               completed\ *)
-                echo "::error::The Supabase Preview check concluded '${run#completed }' for $SHA. The integration's comment on the pull request says why; a 'skipped' means the integration's 'Supabase changes only' option is on, and every pull request needs a branch, so switch it off."
+                echo "::error::The Supabase Preview check concluded '${run#completed }' for $SHA. The integration's comment on the pull request says why. A 'skipped' means no Supabase branch was made for this git branch: either the integration's 'Supabase changes only' option is on (switch it off; every pull request needs a branch), or the git branch predates the integration (create a branch of the same name under the project's Branches page, then push a commit)."
                 exit 1
                 ;;
             esac

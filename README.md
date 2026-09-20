@@ -70,8 +70,10 @@ request needs a branch. Enabling the integration turns Branching on, a paid feat
 branch-hour. The preview job waits for the integration's `Supabase Preview` check on the pull
 request's latest commit, looks the branch up, applies this repository's own migrations to it (the
 integration runs only `supabase/migrations`, and the schema lives in `packages/db`), then uploads
-the Worker version. When `Supabase Preview` fails, the integration's comment on the pull request
-says why, and the preview job stops with a message pointing there.
+the Worker version. When `Supabase Preview` fails or is skipped, the integration's comment on the
+pull request says why, and the preview job stops with a message pointing there. The integration
+makes a Supabase branch when a git branch is created, so a git branch that predates it has none:
+create one of the same name under the project's Branches page, then push a commit.
 
 ### Hyperdrive, once
 
