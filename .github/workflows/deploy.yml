@@ -1,0 +1,90 @@
+name: Deploy to Cloudflare Worker
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.url }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Require the deployment settings
+        env:
+          WORKER_NAME: ${{ vars.CLOUDFLARE_WORKER_NAME }}
+          PUBLIC_SUPABASE_URL: ${{ vars.PUBLIC_SUPABASE_URL }}
+          APP_ORIGINS: ${{ vars.APP_ORIGINS }}
+          LOG_LEVEL: ${{ vars.LOG_LEVEL }}
+          HYPERDRIVE_ID: ${{ vars.CLOUDFLARE_HYPERDRIVE_ID }}
+          DB_URL: ${{ secrets.DB_URL }}
+        run: |
+          where="(Settings → Secrets and variables → Actions)"
+          [ -n "$WORKER_NAME" ] || { echo "::error::Set the repository variable CLOUDFLARE_WORKER_NAME to the Worker's name $where" && exit 1; }
+          [ -n "$PUBLIC_SUPABASE_URL" ] || { echo "::error::Set the repository variable PUBLIC_SUPABASE_URL to the production Supabase project URL $where" && exit 1; }
+          [ -n "$APP_ORIGINS" ] || { echo "::error::Set the repository variable APP_ORIGINS to the comma-separated origins allowed to call the API $where" && exit 1; }
+          [ -n "$LOG_LEVEL" ] || { echo "::error::Set the repository variable LOG_LEVEL to an Effect log level such as Info $where" && exit 1; }
+          # The database reaches the Worker one of two ways: a Hyperdrive binding (the id is a
+          # variable) or a connection string (a secret). One of them has to be set.
+          [ -n "$HYPERDRIVE_ID" ] || [ -n "$DB_URL" ] || { echo "::error::Set the repository variable CLOUDFLARE_HYPERDRIVE_ID or the secret DB_URL so the Worker can reach Postgres $where" && exit 1; }
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - name: Check
+        run: nix flake check
+      - name: Build
+        working-directory: apps/server
+        run: nix build "$GITHUB_WORKSPACE#server-worker"
+      - name: Wrangler config
+        id: config
+        uses: ./.github/actions/wrangler-config
+        with:
+          working-directory: apps/server
+          hyperdrive-id: ${{ vars.CLOUDFLARE_HYPERDRIVE_ID }}
+      - name: Deploy
+        id: deploy
+        working-directory: apps/server
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # Wrangler appends one JSON object per line here; the deploy record carries the deployed
+          # URLs, which is sturdier than scraping them out of the human-readable log.
+          WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/wrangler-output.ndjson
+          CONFIG: ${{ steps.config.outputs.path }}
+          WORKER_NAME: ${{ vars.CLOUDFLARE_WORKER_NAME }}
+          PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}
+          PUBLIC_SUPABASE_URL: ${{ vars.PUBLIC_SUPABASE_URL }}
+          APP_ORIGINS: ${{ vars.APP_ORIGINS }}
+          LOG_LEVEL: ${{ vars.LOG_LEVEL }}
+          HYPERDRIVE_ID: ${{ vars.CLOUDFLARE_HYPERDRIVE_ID }}
+          DB_URL: ${{ secrets.DB_URL }}
+        run: |
+          args=(
+            deploy --config "$CONFIG" --name "$WORKER_NAME"
+            --var "PUBLIC_SUPABASE_URL:$PUBLIC_SUPABASE_URL"
+            --var "APP_ORIGINS:$APP_ORIGINS"
+            --var "LOG_LEVEL:$LOG_LEVEL"
+          )
+          # With a Hyperdrive bound, production carries no DB_URL: the binding is the database, and
+          # the Worker reads the binding's connection string. Without one, DB_URL is the database,
+          # uploaded as a secret rather than a var so it shows in neither the dashboard nor this log.
+          if [ -z "$HYPERDRIVE_ID" ]; then
+            jq -n --arg url "$DB_URL" '{ DB_URL: $url }' > "$RUNNER_TEMP/secrets.json"
+            args+=(--secrets-file "$RUNNER_TEMP/secrets.json")
+          fi
+          nix run nixpkgs#wrangler -- "${args[@]}"
+          # The custom domain wins once a fork sets it; until then the badge links to workers.dev.
+          url="${PRODUCTION_URL:-$(jq -r 'select(.type == "deploy") | .targets[0] // empty' "$WRANGLER_OUTPUT_FILE_PATH")}"
+          if [ -z "$url" ]; then
+            echo "::error::wrangler did not report a deployed URL and PRODUCTION_URL is unset" && exit 1
+          fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"

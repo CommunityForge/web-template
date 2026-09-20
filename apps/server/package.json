@@ -1,0 +1,30 @@
+{
+  "name": "@replaceme/server",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The HTTP API server",
+  "type": "module",
+  "sideEffects": [],
+  "scripts": {
+    "build": "tsc -b tsconfig.json && pnpm run build:worker",
+    "build:worker": "esbuild src/Worker.ts --bundle --format=esm --platform=neutral --target=es2022 --external:node:* --external:cloudflare:* --outfile=build/worker.js",
+    "check": "tsc -b tsconfig.json",
+    "coverage": "vitest --coverage",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@effect/platform-node": "catalog:effect",
+    "@replaceme/db": "workspace:*",
+    "@replaceme/domain": "workspace:*",
+    "@replaceme/supabase": "workspace:*",
+    "effect": "catalog:effect",
+    "jose": "^6.2.3"
+  },
+  "devDependencies": {
+    "@effect/vitest": "catalog:effect",
+    "@types/node": "catalog:",
+    "esbuild": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

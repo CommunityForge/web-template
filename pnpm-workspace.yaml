@@ -7,18 +7,34 @@ packages:
 # keeps the dependency tree coherent as the repo grows.
 catalog:
   "@types/node": ^25.9.5
-  "@vitest/coverage-v8": 4.1.10
+  "@vitest/coverage-v8": 5.0.1
+  # Pinned to the esbuild Vite already resolves, so the tree carries one esbuild.
+  esbuild: 0.28.2
+  tstyche: 7.2.3
+  tsx: ^4.20.0
   typescript: 7.0.2
-  vitest: 4.1.10
+  vitest: 5.0.1
 
-# Named catalog so the whole Effect line moves in lockstep.
+# Named catalog so the whole Effect line moves in lockstep: bump the one version below and
+# every unit follows. A dist-tag here (`rc`) would let a freshly resolved unit land on a newer
+# release than the units already in the lockfile. `@effect/vitest` requires the Vitest major the
+# `vitest` catalog entry names, so the two are bumped together.
 catalogs:
   effect:
-    "@effect/atom-react": rc
-    "@effect/platform-browser": rc
-    "@effect/tsgo": 0.36.4
-    "@effect/vitest": rc
-    effect: rc
+    "@effect/atom-react": 4.0.0-rc.116
+    "@effect/platform-browser": 4.0.0-rc.116
+    "@effect/platform-node": 4.0.0-rc.116
+    "@effect/platform-node-shared": 4.0.0-rc.116
+    "@effect/sql-pg": 4.0.0-rc.116
+    "@effect/tsgo": 0.45.0
+    "@effect/vitest": 4.0.0-rc.116
+    effect: 4.0.0-rc.116
+
+# `@effect/platform-node` depends on `platform-node-shared` with a caret range, which a
+# prerelease resolver satisfies with the NEWEST rc -- one built against a newer `effect` than
+# the catalog pins. Held to the catalog so the whole line really does move together.
+overrides:
+  "@effect/platform-node-shared": catalog:effect
 
 engineStrict: true
 

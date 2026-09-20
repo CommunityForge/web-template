@@ -11,8 +11,8 @@
 # Path literals resolve relative to *this file*, so `root = ./..` is always the repo root
 # regardless of where a calling module lives. Callers therefore pass repo-root-relative
 # `extraSrcs` (`./.` for their own directory, `../../packages/foo` for a dependency), and the
-# derivation's working directory mirrors the repo layout: a package at `packages/core` builds
-# into `$PWD/packages/core/dist`.
+# derivation's working directory mirrors the repo layout: a package at `packages/lib` builds
+# into `$PWD/packages/lib/dist`.
 
 {
   pnpm,
@@ -189,6 +189,12 @@ pkgs.buildNpmPackage (
       ;
     npmConfigHook = pkgs.pnpmConfigHook.override { inherit pnpm; };
     npmDeps = pnpmDeps;
+    # The Node this unit was built against, for whatever runs its output (a NixOS module's
+    # systemd unit, say) -- so bumping `nodejs` in `flake.nix` moves the build and the runtime
+    # together instead of leaving a second hardcoded attribute to forget.
+    passthru = (args.passthru or { }) // {
+      inherit nodejs;
+    };
     # `pnpmConfigHook` shells out to `pnpm`, and the build phases below invoke
     # `pnpm --filter=...` directly. Merged rather than assigned so callers can add their own.
     nativeBuildInputs = (args.nativeBuildInputs or [ ]) ++ [ pnpm ];

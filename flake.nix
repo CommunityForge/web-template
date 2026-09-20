@@ -49,8 +49,12 @@
       imports = [
         treefmt-nix.flakeModule
         git-hooks-nix.flakeModule
-        ./packages/core/core.nix
+        ./packages/lib/lib.nix
+        ./packages/domain/domain.nix
+        ./packages/db/db.nix
+        ./packages/supabase/supabase.nix
         ./apps/frontend/frontend.nix
+        ./apps/server/server.nix
       ];
       perSystem =
         {
@@ -99,6 +103,7 @@
             # configures git's credential helper) and the wizard library's
             # set_secret/set_var helpers.
             pkgs.gh
+            pkgs.supabase-cli
             pkgs.oxfmt
             pkgs.oxlint
             pkgs.tsgolint
@@ -120,9 +125,12 @@
           checks = config.packages // {
             actionlint =
               let
+                # The whole `.github` tree, not just the workflows: actionlint resolves a
+                # `uses: ./.github/actions/<name>` against the local action's metadata to check
+                # the `with:` keys a workflow passes it.
                 workflows = pkgs.lib.fileset.toSource {
                   root = ./.;
-                  fileset = ./.github/workflows;
+                  fileset = ./.github;
                 };
               in
               pkgs.runCommand "actionlint"

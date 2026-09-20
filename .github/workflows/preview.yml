@@ -1,0 +1,189 @@
+name: Preview
+
+on:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    # Pull requests from forks cannot read the Cloudflare secrets, so there is nothing to upload.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    environment:
+      name: preview
+      url: ${{ steps.upload.outputs.url }}
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
+      # The wait below reads the `Supabase Preview` check run the integration posts.
+      checks: read
+    steps:
+      - name: Require the preview settings
+        env:
+          WORKER_NAME: ${{ vars.CLOUDFLARE_WORKER_NAME }}
+          APP_ORIGINS: ${{ vars.APP_ORIGINS }}
+          LOG_LEVEL: ${{ vars.LOG_LEVEL }}
+          SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          where="(Settings → Secrets and variables → Actions)"
+          [ -n "$WORKER_NAME" ] || { echo "::error::Set the repository variable CLOUDFLARE_WORKER_NAME to the Worker's name $where" && exit 1; }
+          [ -n "$APP_ORIGINS" ] || { echo "::error::Set the repository variable APP_ORIGINS to the comma-separated origins allowed to call the API $where" && exit 1; }
+          [ -n "$LOG_LEVEL" ] || { echo "::error::Set the repository variable LOG_LEVEL to an Effect log level such as Info $where" && exit 1; }
+          # The preview's database is the pull request's Supabase branch, looked up below. These two
+          # are what the lookup needs.
+          [ -n "$SUPABASE_PROJECT_REF" ] || { echo "::error::Set the repository variable SUPABASE_PROJECT_REF to the production Supabase project's reference $where" && exit 1; }
+          [ -n "$SUPABASE_ACCESS_TOKEN" ] || { echo "::error::Set the repository secret SUPABASE_ACCESS_TOKEN to a Supabase personal access token that can read the project's branches $where" && exit 1; }
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      # Building first: the branch is usually still coming up when the job starts, and the build is
+      # the one step that needs nothing from it.
+      - name: Build
+        working-directory: apps/server
+        run: nix build "$GITHUB_WORKSPACE#server-worker"
+      - name: Wait for the pull request's Supabase branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          # Supabase's GitHub integration keeps one branch per git branch and posts a check run
+          # named "Supabase Preview" on each pushed commit once the branch has applied
+          # `supabase/config.toml` and its migrations. The branch's connection string exists well
+          # before that, so the check run -- not the connection string -- is what "ready" means
+          # here. It is re-posted per push, so this waits on the commit being built.
+          for attempt in $(seq 1 60); do
+            run="$(gh api --method GET "repos/$GITHUB_REPOSITORY/commits/$SHA/check-runs" \
+              -f check_name='Supabase Preview' \
+              --jq '.check_runs[0] | "\(.status) \(.conclusion // "")"')" || run=""
+            case "$run" in
+              "completed success")
+                echo "Supabase Preview succeeded for $SHA"
+                exit 0
+                ;;
+              completed\ *)
+                echo "::error::The Supabase Preview check concluded '${run#completed }' for $SHA. The integration's comment on the pull request says why. A 'skipped' means no Supabase branch was made for this git branch: either the integration's 'Supabase changes only' option is on (switch it off; every pull request needs a branch), or the git branch predates the integration (create a branch of the same name under the project's Branches page, then push a commit)."
+                exit 1
+                ;;
+            esac
+            echo "Supabase Preview is not finished for $SHA (attempt $attempt of 60)"
+            if [ "$attempt" -lt 60 ]; then sleep 10; fi
+          done
+          echo "::error::No successful Supabase Preview check for $SHA after 10 minutes. Is Branching enabled on the project and the repository connected under Integrations → GitHub?"
+          exit 1
+      - name: Look up the pull request's Supabase branch
+        id: supabase
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          nix run nixpkgs#supabase-cli -- branches get "$BRANCH" --project-ref "$SUPABASE_PROJECT_REF" --output env > "$RUNNER_TEMP/branch.env"
+          # Every value in that file is a credential or names one. Mask them all before anything
+          # below can echo one.
+          while IFS='=' read -r key raw; do
+            value="$(printf '%s' "$raw" | sed -E 's/^"(.*)"$/\1/')"
+            if [ -n "$key" ] && [ -n "$value" ]; then
+              echo "::add-mask::$value"
+            fi
+          done < "$RUNNER_TEMP/branch.env"
+          # An absent key is reported below, not here: `grep` finding nothing must not end the step.
+          value() {
+            { grep "^$1=" "$RUNNER_TEMP/branch.env" || true; } | head -1 | cut -d= -f2- | sed -E 's/^"(.*)"$/\1/'
+          }
+          supabase_url="$(value SUPABASE_URL)"
+          postgres_url="$(value POSTGRES_URL)"
+          # Previews bind no Hyperdrive, so these two are the preview's whole database and token
+          # issuer. An empty one would upload a version that fails its first request; fail here
+          # instead, naming what came back.
+          if [ -z "$supabase_url" ] || [ -z "$postgres_url" ]; then
+            echo "::error::Could not read SUPABASE_URL and POSTGRES_URL for Supabase branch '$BRANCH' of project $SUPABASE_PROJECT_REF. Keys reported: $(cut -d= -f1 "$RUNNER_TEMP/branch.env" | tr '\n' ' ')"
+            exit 1
+          fi
+          # POSTGRES_URL is the branch's pooler in transaction mode (port 6543), which does not keep
+          # prepared statements across statements. The same pooler answers in session mode on 5432,
+          # which does; the migrator and the Worker's client both rely on that. The CLI prints no
+          # session-mode URL of its own, so this rewrite is the only source, and a URL it does not
+          # match is a shape this job does not know how to use.
+          db_url="${postgres_url/:6543\//:5432\/}"
+          if [ "$db_url" = "$postgres_url" ]; then
+            echo "::error::POSTGRES_URL for Supabase branch '$BRANCH' is not on port 6543, so the session-pooler rewrite did not apply. Check what the CLI's --output env now prints."
+            exit 1
+          fi
+          echo "::add-mask::$db_url"
+          {
+            echo "url=$supabase_url"
+            echo "db_url=$db_url"
+          } >> "$GITHUB_OUTPUT"
+      - name: Migrate the Supabase branch
+        env:
+          DB_URL: ${{ steps.supabase.outputs.db_url }}
+        run: |
+          # The integration applies only `supabase/migrations`, and this repository keeps its schema
+          # in `packages/db` under Effect's migrator, so the branch has that schema only once this
+          # runs. Migrate, then audit, from the bundled operator programs: no workspace is installed
+          # on this runner.
+          nix run "$GITHUB_WORKSPACE#db-migrator"
+      # No `hyperdrive-id` ON PURPOSE: a version uploaded with the production binding would carry
+      # a route to production data that only the Worker's var-first precedence keeps closed.
+      # Without it, the branch's DB_URL is the preview's only database.
+      - name: Wrangler config
+        id: config
+        uses: ./.github/actions/wrangler-config
+        with:
+          working-directory: apps/server
+      - name: Upload preview version
+        id: upload
+        working-directory: apps/server
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # Wrangler appends one JSON object per line here; the version-upload record carries the
+          # preview URLs, which is sturdier than scraping them out of the human-readable log.
+          WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/wrangler-output.ndjson
+          CONFIG: ${{ steps.config.outputs.path }}
+          WORKER_NAME: ${{ vars.CLOUDFLARE_WORKER_NAME }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          APP_ORIGINS: ${{ vars.APP_ORIGINS }}
+          LOG_LEVEL: ${{ vars.LOG_LEVEL }}
+          PREVIEW_SUPABASE_URL: ${{ steps.supabase.outputs.url }}
+          PREVIEW_DB_URL: ${{ steps.supabase.outputs.db_url }}
+        run: |
+          # A version only gets a preview URL while the Worker itself has Preview URLs switched on.
+          # `versions upload` reads that switch but never sets it; `triggers deploy` applies the
+          # `workers_dev`/`preview_urls` settings from the config, so a Worker created by hand in
+          # the dashboard needs no manual toggle.
+          nix run nixpkgs#wrangler -- triggers deploy --config "$CONFIG" --name "$WORKER_NAME"
+          # The branch's connection string travels as a secret, never a var, so it shows in neither
+          # the dashboard nor this log.
+          jq -n --arg url "$PREVIEW_DB_URL" '{ DB_URL: $url }' > "$RUNNER_TEMP/secrets.json"
+          # `pr-<n>` is a stable alias, so the URL stays the same across pushes to the same PR.
+          nix run nixpkgs#wrangler -- versions upload \
+            --config "$CONFIG" \
+            --name "$WORKER_NAME" \
+            --preview-alias "pr-${PR_NUMBER}" \
+            --tag "${GITHUB_SHA::7}" \
+            --message "Pull request #${PR_NUMBER} at ${GITHUB_SHA::7}" \
+            --var "PUBLIC_SUPABASE_URL:$PREVIEW_SUPABASE_URL" \
+            --var "APP_ORIGINS:$APP_ORIGINS" \
+            --var "LOG_LEVEL:$LOG_LEVEL" \
+            --secrets-file "$RUNNER_TEMP/secrets.json"
+          url=$(jq -r 'select(.type == "version-upload") | .preview_alias_url // .preview_url // empty' \
+            "$WRANGLER_OUTPUT_FILE_PATH")
+          if [ -z "$url" ]; then
+            echo "::error::wrangler did not report a preview URL" && exit 1
+          fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+      - name: Comment on the pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          URL: ${{ steps.upload.outputs.url }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          body="$(printf '## Preview 🔶\n\n%s\n\nBuilt from %s.' "$URL" "$SHA")"
+          gh pr comment "$PR_NUMBER" --edit-last --create-if-none --body "$body"

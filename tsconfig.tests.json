@@ -20,8 +20,14 @@
       // These aliases make tests type-check against *source* rather than emitted `dist/*.d.ts`,
       // and are the escape hatch for reaching `internal/*` (which package `exports` null out).
       // They are also how you break a cyclic workspace dependency in a test suite.
-      "@replaceme/core": ["./packages/core/src/index.ts"],
-      "@replaceme/core/*": ["./packages/core/src/*.ts"]
+      "@replaceme/lib": ["./packages/lib/src/index.ts"],
+      "@replaceme/lib/*": ["./packages/lib/src/*.ts"],
+      "@replaceme/domain": ["./packages/domain/src/index.ts"],
+      "@replaceme/domain/*": ["./packages/domain/src/*.ts"],
+      "@replaceme/db": ["./packages/db/src/index.ts"],
+      "@replaceme/db/*": ["./packages/db/src/*.ts"],
+      "@replaceme/supabase": ["./packages/supabase/src/index.ts"],
+      "@replaceme/supabase/*": ["./packages/supabase/src/*.ts"]
     }
   }
 }

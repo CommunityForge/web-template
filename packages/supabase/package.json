@@ -1,0 +1,48 @@
+{
+  "name": "@replaceme/supabase",
+  "version": "0.0.0",
+  "description": "An Effect Supabase adapter",
+  "license": "MIT",
+  "files": [
+    "src/**/*.ts",
+    "dist/**/*.js",
+    "dist/**/*.js.map",
+    "dist/**/*.d.ts",
+    "dist/**/*.d.ts.map"
+  ],
+  "type": "module",
+  "sideEffects": [],
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts",
+    "./*/index": null,
+    "./internal/*": null,
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public",
+    "directory": "dist",
+    "linkDirectory": false
+  },
+  "scripts": {
+    "babel": "babel dist --plugins annotate-pure-calls --out-dir dist --source-maps",
+    "build": "tsc -b tsconfig.json && pnpm babel",
+    "check": "tsc -b tsconfig.json",
+    "coverage": "vitest --coverage",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.116.0",
+    "effect": "catalog:effect"
+  },
+  "devDependencies": {
+    "@effect/vitest": "catalog:effect",
+    "@replaceme/domain": "workspace:*",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "@replaceme/domain": "workspace:^"
+  }
+}
