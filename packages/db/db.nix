@@ -1,6 +1,11 @@
 _: {
   perSystem =
-    { pkgs, buildPnpmPackage, ... }:
+    {
+      config,
+      pkgs,
+      buildPnpmPackage,
+      ...
+    }:
     let
       fs = pkgs.lib.fileset;
       # `Pg.ts` deliberately has no `Config.withDefault`, so an unset variable stops the process
@@ -62,11 +67,27 @@ _: {
           oxlint --type-aware --disable-nested-config packages/db
           runHook postCheck
         '';
+        # The compiled package, its sources and manifest, plus `build/`: the two operator programs
+        # bundled by `build:bin` into self-contained modules importing only `node:*`. `dist/` is not
+        # runnable without a workspace; `build/` is, and `db-migrator` below runs it.
         installPhase = ''
           runHook preInstall
           mkdir -p $out
-          cp -r ./packages/db/dist ./packages/db/src ./packages/db/package.json $out/
+          cp -r ./packages/db/dist ./packages/db/src ./packages/db/package.json ./packages/db/build $out/
           runHook postInstall
+        '';
+      };
+
+      # The operator programs as one self-contained command: migrate, then audit, against whatever
+      # `DB_URL` (or the five `DB_*` values) names. No workspace, no pnpm, no dev shell -- only the
+      # Node the package was built against -- which is what lets a CI job run it straight from
+      # `nix run` before it has installed anything. The apps below are the dev-shell equivalents.
+      packages.db-migrator = pkgs.writeShellApplication {
+        name = "db-migrator";
+        runtimeInputs = [ config.packages.db.passthru.nodejs ];
+        text = ''
+          node ${config.packages.db}/build/migrate.js
+          node ${config.packages.db}/build/audit.js
         '';
       };
 

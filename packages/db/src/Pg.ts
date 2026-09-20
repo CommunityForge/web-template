@@ -24,6 +24,9 @@
 import * as PgClient from "@effect/sql-pg/PgClient"
 import * as PgTypes from "@effect/sql-pg/PgTypes"
 import * as Config from "effect/Config"
+import * as Effect from "effect/Effect"
+import * as Layer from "effect/Layer"
+import * as Option from "effect/Option"
 import * as Result from "effect/Result"
 
 /**
@@ -114,3 +117,20 @@ export const urlConfig = {
  * @category layers
  */
 export const PgUrlLive = PgClient.layerConfig(urlConfig)
+
+/**
+ * `PgUrlLive` when `DB_URL` is set, `PgLive` otherwise: the shape an operator program takes, so one binary runs against
+ * local Supabase's five `DB_*` values and against a hosted branch's single connection string alike.
+ *
+ * `DB_URL` wins whenever it is present; the five parts are never consulted then, so a stale `DB_HOST` beside a `DB_URL`
+ * is inert rather than a second candidate.
+ *
+ * @since 0.0.0
+ * @category layers
+ */
+export const PgAutoLive = Layer.unwrap(
+  Effect.gen(function* () {
+    const url = yield* Config.option(Config.Redacted("DB_URL"))
+    return Option.isSome(url) ? PgUrlLive : PgLive
+  }),
+)

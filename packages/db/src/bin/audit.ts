@@ -15,6 +15,9 @@
  * pnpm exec tsx ./packages/db/src/bin/audit.ts
  * ```
  *
+ * The database is `DB_URL` when set, else the five `DB_*` values. This file is also bundled to `build/audit.js`, one
+ * self-contained module importing only `node:*`, which is how it runs where no workspace is installed.
+ *
  * @since 0.0.0
  */
 
@@ -23,7 +26,7 @@ import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import * as SqlClient from "effect/unstable/sql/SqlClient"
 
-import { PgLive } from "../Pg.js"
+import { PgAutoLive } from "../Pg.js"
 
 /**
  * Schemas Supabase exposes through PostgREST, per `supabase/config.toml`'s `[api] schemas`. Kept here rather than read
@@ -94,7 +97,7 @@ const program = findViolations.pipe(
           ].join("\n"),
         ).pipe(Effect.andThen(Effect.fail(new DataApiExposed({ violations: violations.length })))),
   ),
-  Effect.provide(PgLive),
+  Effect.provide(PgAutoLive),
 )
 
 NodeRuntime.runMain(program)

@@ -57,12 +57,21 @@ Secrets and variables → Actions:
 | Variable | `LOG_LEVEL`                | Required. An Effect log level literal, case-sensitive: `Info` is the usual choice                                                 |
 | Variable | `CLOUDFLARE_HYPERDRIVE_ID` | The Hyperdrive config the production Worker reaches Postgres through (below). Either this or the `DB_URL` secret                  |
 | Secret   | `DB_URL`                   | Postgres connection string for production when there is no Hyperdrive yet: the Supabase session pooler, port 5432                 |
-| Variable | `PREVIEW_SUPABASE_URL`     | Required for previews. The Supabase branch's project URL a pull-request preview verifies tokens against                           |
-| Secret   | `PREVIEW_DB_URL`           | Required for previews. The Supabase branch's session-pooler connection string; a preview never touches production data            |
+| Variable | `SUPABASE_PROJECT_REF`     | Required for previews. The production Supabase project's reference; pull-request previews look their branch up under it           |
+| Secret   | `SUPABASE_ACCESS_TOKEN`    | Required for previews. A Supabase personal access token (Account → Access Tokens) that can read that project's branches           |
 | Variable | `PRODUCTION_URL`           | Optional. The custom domain once there is one; until then the deployment badge links to the `workers.dev` address                 |
 
 Every push to `main` deploys the site and API. Every pull request gets a preview link posted as a
-comment; the preview serves both, pointed at the Supabase branch the two preview inputs name.
+comment; the preview serves both, pointed at the pull request's own Supabase branch and never at
+production. That branch is the one Supabase's GitHub integration creates per git branch: under the
+project's Settings → Integrations → GitHub, connect the repository with the **Working directory**
+set to `supabase`, **Automatic branching** on, and **Supabase changes only** off, because every pull
+request needs a branch. Enabling the integration turns Branching on, a paid feature billed per
+branch-hour. The preview job waits for the integration's `Supabase Preview` check on the pull
+request's latest commit, looks the branch up, applies this repository's own migrations to it (the
+integration runs only `supabase/migrations`, and the schema lives in `packages/db`), then uploads
+the Worker version. When `Supabase Preview` fails, the integration's comment on the pull request
+says why, and the preview job stops with a message pointing there.
 
 ### Hyperdrive, once
 

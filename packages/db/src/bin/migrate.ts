@@ -10,8 +10,12 @@
  * after any reset. That is the standing cost of Effect owning the DDL rather than the Supabase CLI, and it is why this
  * exists as its own command.
  *
- * Configuration comes from the ambient `ConfigProvider`, so `DB_HOST`/`DB_PORT`/`DB_USER`/ `DB_PASSWD`/`DB_DATABASE`
- * override the local-Supabase defaults without touching this file.
+ * Configuration comes from the ambient `ConfigProvider`: one `DB_URL` connection string when set (a hosted database's
+ * SESSION-mode pooler, never the transaction pooler), else `DB_HOST`/`DB_PORT`/`DB_USER`/`DB_PASSWD`/`DB_DATABASE`.
+ * Nothing here has a default; the launcher names every value.
+ *
+ * This file is also bundled to `build/migrate.js`, one self-contained module importing only `node:*`, which is how it
+ * runs where no workspace is installed.
  *
  * @since 0.0.0
  */
@@ -22,9 +26,9 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 
 import { run } from "../Migrator.js"
-import { PgLive } from "../Pg.js"
+import { PgAutoLive } from "../Pg.js"
 
-const MigratorServices = Layer.mergeAll(PgLive, NodeServices.layer)
+const MigratorServices = Layer.mergeAll(PgAutoLive, NodeServices.layer)
 
 const program = run.pipe(
   Effect.tap((applied) =>

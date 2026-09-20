@@ -5,9 +5,12 @@ standing exposure audit (`bin/audit.ts`), and the repositories over the tables, 
 no table today; the recipe below is what the first one follows.
 
 `@replaceme/domain` is the one workspace dependency: repositories are typed in terms of the domain's branded ids and
-never re-declare a shape. The five `DB_*` variables (`DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWD`, `DB_DATABASE`) come
-from the ambient `ConfigProvider` with no defaults, so a missing credential stops the process rather than quietly
-connecting somewhere. The `supabase` CLI is needed for the drift gate's oracle only; nothing at runtime uses it.
+never re-declare a shape. The database is named one of two ways through the ambient `ConfigProvider`, with no defaults,
+so a missing credential stops the process rather than quietly connecting somewhere: the five `DB_*` variables
+(`DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWD`, `DB_DATABASE`) as `Pg.PgLive`, or one `DB_URL` connection string as
+`Pg.PgUrlLive`. `Pg.PgAutoLive` takes `DB_URL` when it is set and the five otherwise, and is what the operator programs
+use, so the same binary runs against local Supabase and against a hosted branch's session pooler. The `supabase` CLI is
+needed for the drift gate's oracle only; nothing at runtime uses it.
 
 ## Commands
 
@@ -17,10 +20,16 @@ connecting somewhere. The `supabase` CLI is needed for the drift gate's oracle o
 | `nix run .#db-audit`               | Exit non-zero if an exposed table lacks row security         |
 | `nix run .#db-reset`               | `supabase db reset`, then migrate, then audit                |
 | `nix run .#db-sync-supabase-local` | Regenerate `src/internal/supabase-database.ts` from local DB |
+| `nix run .#db-migrator`            | Migrate, then audit, with no workspace: `DB_URL` or `DB_*`   |
 
 The apps export local-Supabase `DB_*` values; set them in the environment to point elsewhere. A full local rebuild is
 `db-reset`, in that order: a user-owned table references `auth.users`, which only exists after Supabase's reset, and a
 reset restores Supabase's stock default privileges, so the lockdown is re-applied and re-checked rather than assumed.
+
+`db-migrator` is a package, not an app: `build:bin` bundles `bin/migrate.ts` and `bin/audit.ts` with esbuild into
+`build/`, one self-contained module each importing only `node:*`, and the package runs them with the Node it was built
+against. It exports no `DB_*` defaults, so it runs only where the environment names a database, which is the point: a
+CI job with nothing installed points `DB_URL` at a hosted branch's session pooler and runs it straight from `nix run`.
 
 ## A repository, module for module
 

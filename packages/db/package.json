@@ -30,7 +30,8 @@
   },
   "scripts": {
     "babel": "babel dist --plugins annotate-pure-calls --out-dir dist --source-maps",
-    "build": "tsc -b tsconfig.json && pnpm babel",
+    "build": "tsc -b tsconfig.json && pnpm babel && pnpm run build:bin",
+    "build:bin": "esbuild src/bin/migrate.ts src/bin/audit.ts --bundle --format=esm --platform=node --target=node22 --outdir=build",
     "check": "tsc -b tsconfig.json",
     "coverage": "vitest --coverage",
     "test": "vitest",
@@ -45,6 +46,7 @@
     "@effect/vitest": "catalog:effect",
     "@replaceme/domain": "workspace:*",
     "@types/node": "catalog:",
+    "esbuild": "catalog:",
     "ts-morph": "^28.0.0",
     "tstyche": "catalog:",
     "tstyche-typescript": "npm:typescript@^5.9.0",

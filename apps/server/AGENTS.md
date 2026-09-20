@@ -227,8 +227,9 @@ them. `wrangler.json` beside this file is its config, and this unit owns it.
 
 ### Hyperdrive, and why its origin is the session pooler
 
-Production binds one Hyperdrive; previews do not (they carry `DB_URL` as a version secret; see the preview workflow).
-The one-time `wrangler hyperdrive create` is in the README.
+Production binds one Hyperdrive; the preview workflow binds none, so a preview version's only database is the `DB_URL`
+version secret it is uploaded with and there is no binding for it to fall through to. The one-time `wrangler hyperdrive
+create` is in the README.
 
 The Hyperdrive's origin is Supabase's **session pooler on port 5432**, not the direct connection. Supabase's direct
 host is IPv6-only without the paid IPv4 add-on and Hyperdrive's IPv6 reach is undocumented; the session pooler is
