@@ -10,7 +10,9 @@ export function Home() {
       <h1 className="my-6 font-heading text-[56px] font-medium tracking-[-1.68px] text-foreground max-lg:my-4 max-lg:text-[36px]">
         Welcome
       </h1>
-      <p className="mb-8 max-w-[36ch]">Manage your tasks from the sidebar.</p>
+      <p className="mb-8 max-w-[36ch]">
+        Manage your tasks from the sidebar, or jump straight in with the button below.
+      </p>
       <ReactRouter.Link
         to="/tasks"
         className={Button.buttonVariants({ variant: "default" })}
