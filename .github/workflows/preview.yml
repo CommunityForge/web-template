@@ -49,10 +49,12 @@ jobs:
             substituters = https://cache.nixos.org?priority=0
       - uses: DeterminateSystems/magic-nix-cache-action@main
       # Building first: the branch is usually still coming up when the job starts, and the build is
-      # the one step that needs nothing from it.
+      # the one step that needs nothing from it. The migrator is realized here too, beside the
+      # Worker, so the migrate step below finds it in the store. `server-worker` stays FIRST:
+      # `nix build` links installables in order, and `result` is the directory wrangler serves.
       - name: Build
         working-directory: apps/server
-        run: nix build "$GITHUB_WORKSPACE#server-worker"
+        run: nix build "$GITHUB_WORKSPACE#server-worker" "$GITHUB_WORKSPACE#db-migrator"
       - name: Wait for the pull request's Supabase branch
         env:
           GH_TOKEN: ${{ github.token }}
