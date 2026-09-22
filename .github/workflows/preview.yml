@@ -39,7 +39,14 @@ jobs:
           [ -n "$SUPABASE_PROJECT_REF" ] || { echo "::error::Set the repository variable SUPABASE_PROJECT_REF to the production Supabase project's reference $where" && exit 1; }
           [ -n "$SUPABASE_ACCESS_TOKEN" ] || { echo "::error::Set the repository secret SUPABASE_ACCESS_TOKEN to a Supabase personal access token that can read the project's branches $where" && exit 1; }
       - uses: actions/checkout@v4
+      # Magic Nix Cache registers itself ahead of cache.nixos.org, so every nixpkgs path would
+      # otherwise be looked up (and re-uploaded) through the rate-limited GitHub Actions cache.
+      # Priority 0 puts the official cache first; the Actions cache then serves only this flake's
+      # own outputs.
       - uses: DeterminateSystems/nix-installer-action@main
+        with:
+          extra-conf: |
+            substituters = https://cache.nixos.org?priority=0
       - uses: DeterminateSystems/magic-nix-cache-action@main
       # Building first: the branch is usually still coming up when the job starts, and the build is
       # the one step that needs nothing from it.

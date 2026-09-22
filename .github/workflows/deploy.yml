@@ -37,7 +37,14 @@ jobs:
           # variable) or a connection string (a secret). One of them has to be set.
           [ -n "$HYPERDRIVE_ID" ] || [ -n "$DB_URL" ] || { echo "::error::Set the repository variable CLOUDFLARE_HYPERDRIVE_ID or the secret DB_URL so the Worker can reach Postgres $where" && exit 1; }
       - uses: actions/checkout@v4
+      # Magic Nix Cache registers itself ahead of cache.nixos.org, so every nixpkgs path would
+      # otherwise be looked up (and re-uploaded) through the rate-limited GitHub Actions cache.
+      # Priority 0 puts the official cache first; the Actions cache then serves only this flake's
+      # own outputs.
       - uses: DeterminateSystems/nix-installer-action@main
+        with:
+          extra-conf: |
+            substituters = https://cache.nixos.org?priority=0
       - uses: DeterminateSystems/magic-nix-cache-action@main
       - name: Check
         run: nix flake check

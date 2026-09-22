@@ -39,8 +39,15 @@ jobs:
         check: ${{ fromJSON(needs.discover.outputs.checks) }}
     steps:
       - uses: actions/checkout@v4
+      # Magic Nix Cache registers itself ahead of cache.nixos.org, so every nixpkgs path would
+      # otherwise be looked up (and re-uploaded) through the rate-limited GitHub Actions cache.
+      # Priority 0 puts the official cache first; the Actions cache then serves only this flake's
+      # own outputs.
       - uses: DeterminateSystems/nix-installer-action@main
         if: ${{ !env.ACT }}
+        with:
+          extra-conf: |
+            substituters = https://cache.nixos.org?priority=0
       - uses: DeterminateSystems/magic-nix-cache-action@main
         if: ${{ !env.ACT }}
       - run: nix build .#checks.x86_64-linux.${{ matrix.check }} -L --no-link
