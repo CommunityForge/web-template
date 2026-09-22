@@ -16,8 +16,9 @@ jobs:
       name: preview
       url: ${{ steps.upload.outputs.url }}
     permissions:
+      # No `id-token` ON PURPOSE: with it, the Nix installer and Magic Nix Cache each spend seconds
+      # on a FlakeHub sign-in this repository has no account for. Nothing here uses OIDC.
       contents: read
-      id-token: write
       pull-requests: write
       # The wait below reads the `Supabase Preview` check run the integration posts.
       checks: read
