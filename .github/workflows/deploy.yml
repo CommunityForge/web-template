@@ -16,8 +16,9 @@ jobs:
       name: production
       url: ${{ steps.deploy.outputs.url }}
     permissions:
+      # No `id-token` ON PURPOSE: with it, the Nix installer and Magic Nix Cache each spend seconds
+      # on a FlakeHub sign-in this repository has no account for. Nothing here uses OIDC.
       contents: read
-      id-token: write
     steps:
       - name: Require the deployment settings
         env:
