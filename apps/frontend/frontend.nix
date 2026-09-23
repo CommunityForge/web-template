@@ -43,5 +43,18 @@ _: {
           runHook postInstall
         '';
       };
+
+      apps.frontend-dev = {
+        type = "app";
+        meta.description = "Run the frontend's Vite dev server with hot reload";
+        program = pkgs.writeShellApplication {
+          name = "frontend-dev";
+          text = ''
+            cd "$(git rev-parse --show-toplevel)/apps/frontend"
+            pnpm install
+            pnpm run dev
+          '';
+        };
+      };
     };
 }

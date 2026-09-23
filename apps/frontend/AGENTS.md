@@ -90,6 +90,9 @@ these are their React and Atom consequences:
 Catalogs gate the Effect line, `typescript`, `vitest`, `@types/node`. React, Vite and Tailwind are
 pinned with ordinary ranges here — intentional.
 
+`nix run .#frontend-dev` runs the Vite dev server with hot reload and prints the local URL. It is the primary
+development loop.
+
 `nix build .#frontend` emits the static bundle to `$out`; its `checkPhase` runs `check`,
 `test --run` and `oxlint --type-aware`.
 
