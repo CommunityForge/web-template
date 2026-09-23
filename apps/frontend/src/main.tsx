@@ -3,7 +3,6 @@ import * as React from "react"
 import * as ReactDom from "react-dom/client"
 import * as ReactRouter from "react-router"
 
-import * as Sidebar from "@/components/ui/sidebar"
 import * as Tooltip from "@/components/ui/tooltip"
 import "@/index.css"
 import * as Theme from "@/features/theme"
@@ -31,11 +30,9 @@ ReactDom.createRoot(document.getElementById("root")!).render(
     <RegistryContext.RegistryProvider>
       <Theme.ThemeSync />
       <Tooltip.TooltipProvider>
-        <Sidebar.SidebarProvider>
-          <ReactRouter.BrowserRouter>
-            <App.App />
-          </ReactRouter.BrowserRouter>
-        </Sidebar.SidebarProvider>
+        <ReactRouter.BrowserRouter>
+          <App.App />
+        </ReactRouter.BrowserRouter>
       </Tooltip.TooltipProvider>
     </RegistryContext.RegistryProvider>
   </React.StrictMode>,
