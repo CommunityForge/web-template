@@ -1,52 +1,46 @@
 ## Purpose
 
-Gives the app shared chrome for moving between its pages, so that a person who lands on any page can
-see what else the app holds and get there, including from a page that does not exist.
+Gives the app shared chrome on every page, a sidebar, so that a person who lands on any page can see
+what else the app holds and get there, including from a page that does not exist.
 
 ## Requirements
 
 ### Requirement: Moving between the app's pages
 
-The system SHALL show, at the top of every page, a way to reach each of the app's pages. Following it
-SHALL change the page without reloading the app.
+The system SHALL show a sidebar on every page with one entry for each of the app's pages; today that
+is the home page. Following an entry SHALL change the page without reloading the app.
 
-#### Scenario: Reaching the task list from the starter page
+#### Scenario: Reaching the home page from the sidebar
 
-- **WHEN** someone on the starter page follows the link to the task list
-- **THEN** the task list page is shown and the address ends in `/tasks`
-
-#### Scenario: Reaching the starter page from the task list
-
-- **WHEN** someone on the task list follows the link to the starter page
-- **THEN** the starter page is shown, with its heading and its click-counter exactly as before
+- **WHEN** someone on any page follows the sidebar's Home entry
+- **THEN** the home page is shown with its `Welcome` heading, without the app reloading
 
 #### Scenario: The current page is identifiable
 
-- **WHEN** someone is on the task list
-- **THEN** the task list's link is marked as the page they are on, distinguishably from the other links
+- **WHEN** someone is on the home page
+- **THEN** the sidebar's Home entry is marked as the page they are on
 
-### Requirement: The starter page keeps working
+### Requirement: Collapsing the sidebar
 
-The system SHALL leave the starter page's existing content unchanged. The only visible difference
-SHALL be the shared navigation now above it.
+The system SHALL let someone collapse the sidebar to a narrow strip of icons, and expand it again,
+from a toggle in the page header.
 
-#### Scenario: The starter page after this change
+#### Scenario: Collapsing and expanding
 
-- **WHEN** someone opens the app at its root address
-- **THEN** the starter page shows its `Get started` heading, its click-counter, and its documentation
-  and community sections, all behaving as they did before
-- **AND** the shared navigation is shown above them
+- **WHEN** someone uses the toggle in the page header
+- **THEN** the sidebar collapses to its icons, and using the toggle again expands it to show the
+  entries' names
 
 ### Requirement: A path the app does not recognize
 
-The system SHALL continue to show a not-found page for any address it does not recognize, and that
-page SHALL carry the shared navigation like every other page.
+The system SHALL show a not-found page for any address it does not recognize, and that page SHALL
+carry the sidebar like every other page.
 
 #### Scenario: An unknown address
 
 - **WHEN** someone opens an address the app has no page for
-- **THEN** the not-found page is shown, the starter page's content is not
-- **AND** the shared navigation is present, so the task list and starter page are both one step away
+- **THEN** the not-found page is shown, the home page's content is not
+- **AND** the sidebar is present, and the page offers a way back to the home page
 
 ### Requirement: Navigation usable without a mouse or a screen
 
@@ -56,5 +50,5 @@ the page.
 #### Scenario: Reaching the navigation by keyboard
 
 - **WHEN** someone moves through a page using only the keyboard
-- **THEN** they reach each navigation link before the page's own content
-- **AND** a screen reader announces it as the app's navigation and identifies which page is current
+- **THEN** they can reach each sidebar entry and the header toggle
+- **AND** a screen reader identifies which entry is the current page

@@ -8,7 +8,7 @@ const STATUS = "font-mono text-[15px]/[135%] tracking-[0.18em] text-primary uppe
 const HEADING =
   "my-6 font-heading text-[56px] font-medium tracking-[-1.68px] text-foreground max-lg:my-4 max-lg:text-[36px]"
 
-// Same treatment as the links on the home page: a styled `<a>`, not `<Button render={<a/>}>`.
+// A styled `<a>`, not `<Button render={<a/>}>`.
 // `<Link>` renders a real anchor with an `href`, so it keeps link semantics while picking up the
 // `secondary` variant's colors.
 const LINK = Button.buttonVariants({
