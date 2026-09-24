@@ -181,6 +181,5 @@ Each unit has its own: `packages/domain/AGENTS.md`, `packages/db/AGENTS.md`,
 
 ## License
 
-Not yet chosen. Until a `LICENSE` file lands, no rights are granted — the code is readable
-here but not licensed for reuse, and `packages/lib` is marked `private` so it cannot be
-published by accident.
+MIT. The full text is in `LICENSE` at the repo root and again in every unit's own root, so a
+unit copied out on its own carries its license with it.
