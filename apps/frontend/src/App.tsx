@@ -3,6 +3,7 @@ import * as ReactRouter from "react-router"
 import * as Home from "./routes/Home.tsx"
 import * as NotFound from "./routes/NotFound.tsx"
 import * as RootLayout from "./routes/RootLayout.tsx"
+import * as Tasks from "./routes/Tasks.tsx"
 
 // The route elements are hoisted out of the tree below because `react-perf/jsx-no-jsx-as-prop` is
 // an error repo-wide and `<Route element={<Home />} />` is JSX-as-prop by construction. Hoisting is
@@ -10,6 +11,7 @@ import * as RootLayout from "./routes/RootLayout.tsx"
 // once at module scope is strictly less work than rebuilding them on every render of `App`.
 const LAYOUT = <RootLayout.RootLayout />
 const HOME = <Home.Home />
+const TASKS = <Tasks.Tasks />
 const NOT_FOUND = <NotFound.NotFound />
 
 // Declarative mode (`docs/start/modes.md`): the route table *is* React, so `App` is the table and
@@ -30,6 +32,10 @@ export function App() {
         <ReactRouter.Route
           index
           element={HOME}
+        />
+        <ReactRouter.Route
+          path="tasks"
+          element={TASKS}
         />
         <ReactRouter.Route
           path="*"

@@ -116,7 +116,7 @@ bundler-built leaf, not a composite project. See `apps/frontend/AGENTS.md`.
 
 **Every import binds a namespace: `import * as Name from "specifier"`.** `Name` is PascalCase
 derived from the module, not from what it exports — `@/components/ui/dropdown-menu` is
-`DropdownMenu`, `@/lib/browser-storage` is `BrowserStorage`, `../theme.ts` is `Theme`. Member access
+`DropdownMenu`, `@/lib/browser-storage` is `BrowserStorage`, `../task.ts` is `Tasks`. Member access
 carries the prefix even when that reads redundantly: `Button.Button`, `Input.Input`, `App.App`. The
 prefix is the point — it says where a name came from without a jump to the import block, and it is
 what keeps a module free to add exports without colliding with its consumers' locals.
@@ -141,7 +141,7 @@ Unqualified is correct in four cases, and only these:
 
 A namespace whose members are all used in type position needs `import type * as Name` —
 `typescript/consistent-type-imports` is an error and does not care that the import is a namespace.
-`ModeToggle.tsx` is the frontend's live example.
+`ModeToggle.tsx` and `test/task-list.test.tsx` are the two live examples.
 
 `vite.config.ts`, `vitest.config.ts`, `vitest.shared.ts` and `vitest.setup.ts` are covered entirely
 by cases 1 and 3, so they need nothing.

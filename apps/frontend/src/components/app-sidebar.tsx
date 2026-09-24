@@ -16,7 +16,10 @@ interface NavItemProps {
 }
 
 const NAV_ITEMS: Array.NonEmptyReadonlyArray<NavItemProps> = pipe(
-  [{ to: "/", label: "Home", end: true, icon: <Lucide.HomeIcon /> }] as const,
+  [
+    { to: "/", label: "Home", end: true, icon: <Lucide.HomeIcon /> },
+    { to: "/tasks", label: "Tasks", end: false, icon: <Lucide.ListTodoIcon /> },
+  ] as const,
   Array.map((item) => ({ ...item, link: <ReactRouter.Link to={item.to} /> })),
 )
 
