@@ -29,20 +29,22 @@ oxfmt, tsgolint and typos all come from Nix rather than npm, so there is one sou
 tool versions and no native postinstall to run inside the build sandbox. Consequently there is no
 `packageManager` field and no `.nvmrc`.
 
-| Command                     | What it does                                                                                |
-| --------------------------- | ------------------------------------------------------------------------------------------- |
-| `pnpm check`                | `tsc -b tsconfig.json` — type-checks the whole graph, sources and tests                     |
-| `pnpm build`                | Builds every unit's `dist/` (`tsc -b`, then Babel for `/*#__PURE__*/`)                      |
-| `pnpm test`                 | Vitest across all workspace units                                                           |
-| `pnpm test:types`           | tstyche type tests (`test/**/*.tst.ts`) in every unit that has them                         |
-| `pnpm coverage`             | Same, with v8 coverage                                                                      |
-| `pnpm lint`                 | oxlint, including the type-aware tsgolint pass                                              |
-| `pnpm clean`                | Removes `dist/`, `coverage/`, `*.tsbuildinfo`                                               |
-| `nix fmt`                   | treefmt — see "Formatting" below for what it actually covers                                |
-| `nix flake check`           | Every check: `formatting`, `spellcheck`, `actionlint`, `psparse`, and a build of every unit |
-| `bin/pre-push-check.sh`     | The cheap checks only: `formatting`, `spellcheck`, `actionlint`. The pre-push git hook      |
-| `nix build .#<unit>`        | Reproducible build of one unit; its `checkPhase` re-runs check/test/lint                    |
-| `nix build .#server-worker` | The deployable Worker: `worker.js` beside the frontend's `assets/`                          |
+| Command                     | What it does                                                                                 |
+| --------------------------- | -------------------------------------------------------------------------------------------- |
+| `pnpm check`                | `tsc -b tsconfig.json` — type-checks the whole graph, sources and tests                      |
+| `pnpm build`                | Builds every unit's `dist/` (`tsc -b`, then Babel for `/*#__PURE__*/`)                       |
+| `pnpm test`                 | Vitest across all workspace units                                                            |
+| `pnpm test:types`           | tstyche type tests (`test/**/*.tst.ts`) in every unit that has them                          |
+| `pnpm coverage`             | Same, with v8 coverage                                                                       |
+| `pnpm lint`                 | oxlint, including the type-aware tsgolint pass                                               |
+| `pnpm clean`                | Removes `dist/`, `coverage/`, `*.tsbuildinfo`                                                |
+| `nix fmt`                   | treefmt — see "Formatting" below for what it actually covers                                 |
+| `nix flake check`           | Every check: `formatting`, `spellcheck`, `actionlint`, `psparse`, and a build of every unit  |
+| `bin/pre-push-check.sh`     | The cheap checks only: `formatting`, `spellcheck`, `actionlint`. The pre-push git hook       |
+| `bin/align-probe.sh`        | Read-only `key=value` facts about where the project stands; what `/Align` reasons from       |
+| `bin/test-align-probe.sh`   | The probe's fixture suite: throwaway repos and a fake `gh`, run by hand like `test-hooks.sh` |
+| `nix build .#<unit>`        | Reproducible build of one unit; its `checkPhase` re-runs check/test/lint                     |
+| `nix build .#server-worker` | The deployable Worker: `worker.js` beside the frontend's `assets/`                           |
 
 ### Formatting
 
@@ -413,8 +415,26 @@ planning transcript is the main cause of slow apply runs. This is enforced, not 
 at `.claude/hooks/fresh-session-guard.sh` blocks `/WriteCode` in any chat where a proposal ran.
 
 Cloud sessions (`CLAUDE_CODE_REMOTE=true`) are the exception: each chat is a fresh sandboxed
-checkout, so the proposal exists only in the chat that wrote it. There the guard allows `/WriteCode`
-and the proposal ends by telling the user to run `/WriteCode` in the same chat.
+checkout, so the proposal exists only in the chat that wrote it. There the guard allows `/WriteCode`,
+`/DefineFeature` ends by committing and pushing the session's branch (a push is a save; no pull
+request is opened), and the proposal ends by telling the user to run `/WriteCode` in the same chat.
+
+The whole cycle, with the stage names `bin/align-probe.sh` emits under each phase:
+
+```
+/DefineFeature ─► new chat ─► /WriteCode ─► test the preview ─► /UpdateDocs ─► merge on GitHub ─► new chat ─► /DefineFeature
+   proposing        planned      building → built → previewing        filed             merged
+```
+
+The archive rides in the change's pull request: `/UpdateDocs` archives on the change's branch,
+commits and pushes, so `main`'s specs and code always land together. Merging is the person's click
+on GitHub, never done from a chat. `/Align` is the fourth local alias, the one onboarding teaches
+for "I'm lost": it runs the probe, names the single situation the person is in, and hands them one
+next step; its rows live in `.claude/skills/Align/SKILL.md`.
+
+`docs/context/` holds reference for epistemic alignment (how the work is done today, terms of the
+trade, forms, rules, examples of good output). Discovery consults its `README.md` index and opens
+only the files whose line bears on the change; it never bulk-loads the folder.
 
 The `.claude/commands/opsx/*.md` commands and `.claude/skills/openspec-*` skills are vendored —
 `openspec update` regenerates them, so never edit them. Local behavior (the lay-facing phase

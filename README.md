@@ -133,6 +133,9 @@ may be malware, click **Done** (not Move to Trash), open **System Settings → P
 Security**, scroll to the bottom, and click **Open Anyway** next to the message about
 `Setup.command`; confirm once and it opens normally from then on.
 
+Lost at any point? In the Code tab, type `/Align`: it reads the project and tells you where you are
+and the one thing to do next.
+
 ### First-time setup (Windows)
 
 The same three browser steps above apply. Then find the file called `Setup.cmd` in the

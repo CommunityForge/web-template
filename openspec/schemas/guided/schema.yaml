@@ -29,8 +29,10 @@ artifacts:
       <phase_1_look_up_dont_ask>
       Read the root AGENTS.md and any nested per-unit AGENTS.md, the existing
       capabilities in openspec/specs/, and the lint, type, and test
-      configuration. Anything these already determine is an answer you record
-      with its source file — never a question you ask.
+      configuration. When docs/context/README.md exists, read its index and
+      open only the files whose line bears on this change. Anything these
+      already determine is an answer you record with its source file — never
+      a question you ask.
       </phase_1_look_up_dont_ask>
 
       <phase_2_scan_and_triage>
