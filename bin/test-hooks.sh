@@ -154,25 +154,25 @@ run_fresh_suite() {
 
   # Transcripts where a proposal ran, one per way propose can appear.
   printf '%s\n' \
-    '{"type":"user","content":"<command-name>/propose</command-name><command-args>add-todo</command-args>"}' \
+    '{"type":"user","content":"<command-name>/DefineFeature</command-name><command-args>add-todo</command-args>"}' \
     >"$tdir/proposed-typed.jsonl"
   printf '%s\n' \
     '{"type":"assistant","content":[{"type":"tool_use","name":"Skill","input":{"skill":"opsx:propose"}}]}' \
     >"$tdir/proposed-skill.jsonl"
 
-  # A clean transcript that MENTIONS /propose in prose (the session-context
+  # A clean transcript that MENTIONS /DefineFeature in prose (the session-context
   # rule text does, every session) — evidence must mean invocation, not mention.
   printf '%s\n' \
-    '{"type":"system","content":"When you are ready for the next one, start a new chat and use /propose."}' \
+    '{"type":"system","content":"When you are ready for the next one, start a new chat and use /DefineFeature."}' \
     >"$tdir/clean.jsonl"
 
   # --- must BLOCK -------------------------------------------------------------
 
-  check "typed /apply after typed /propose" deny \
-    "{\"hook_event_name\":\"UserPromptSubmit\",\"transcript_path\":\"$tdir/proposed-typed.jsonl\",\"prompt\":\"/apply add-todo\"}"
+  check "typed /WriteCode after typed /DefineFeature" deny \
+    "{\"hook_event_name\":\"UserPromptSubmit\",\"transcript_path\":\"$tdir/proposed-typed.jsonl\",\"prompt\":\"/WriteCode add-todo\"}"
 
-  check "apply skill after typed /propose" deny \
-    "{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Skill\",\"transcript_path\":\"$tdir/proposed-typed.jsonl\",\"tool_input\":{\"skill\":\"apply\"}}"
+  check "WriteCode skill after typed /DefineFeature" deny \
+    "{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Skill\",\"transcript_path\":\"$tdir/proposed-typed.jsonl\",\"tool_input\":{\"skill\":\"WriteCode\"}}"
 
   check "opsx:apply skill after propose skill" deny \
     "{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Skill\",\"transcript_path\":\"$tdir/proposed-skill.jsonl\",\"tool_input\":{\"skill\":\"opsx:apply\"}}"
@@ -180,28 +180,28 @@ run_fresh_suite() {
   check "openspec-apply-change skill after propose skill" deny \
     "{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Skill\",\"transcript_path\":\"$tdir/proposed-skill.jsonl\",\"tool_input\":{\"skill\":\"openspec-apply-change\"}}"
 
-  check "/apply via SlashCommand after propose" deny \
-    "{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"SlashCommand\",\"transcript_path\":\"$tdir/proposed-typed.jsonl\",\"tool_input\":{\"command\":\"/apply add-todo\"}}"
+  check "/WriteCode via SlashCommand after DefineFeature" deny \
+    "{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"SlashCommand\",\"transcript_path\":\"$tdir/proposed-typed.jsonl\",\"tool_input\":{\"command\":\"/WriteCode add-todo\"}}"
 
   # --- must ALLOW -------------------------------------------------------------
 
-  check "apply in a chat that never proposed" allow \
-    "{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Skill\",\"transcript_path\":\"$tdir/clean.jsonl\",\"tool_input\":{\"skill\":\"apply\"}}"
+  check "WriteCode in a chat that never proposed" allow \
+    "{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Skill\",\"transcript_path\":\"$tdir/clean.jsonl\",\"tool_input\":{\"skill\":\"WriteCode\"}}"
 
-  check "typed /apply in a clean chat" allow \
-    "{\"hook_event_name\":\"UserPromptSubmit\",\"transcript_path\":\"$tdir/clean.jsonl\",\"prompt\":\"/apply\"}"
+  check "typed /WriteCode in a clean chat" allow \
+    "{\"hook_event_name\":\"UserPromptSubmit\",\"transcript_path\":\"$tdir/clean.jsonl\",\"prompt\":\"/WriteCode\"}"
 
-  check "propose again in the propose chat" allow \
-    "{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Skill\",\"transcript_path\":\"$tdir/proposed-typed.jsonl\",\"tool_input\":{\"skill\":\"propose\"}}"
+  check "DefineFeature again in the DefineFeature chat" allow \
+    "{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Skill\",\"transcript_path\":\"$tdir/proposed-typed.jsonl\",\"tool_input\":{\"skill\":\"DefineFeature\"}}"
 
-  check "archive after propose" allow \
-    "{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Skill\",\"transcript_path\":\"$tdir/proposed-typed.jsonl\",\"tool_input\":{\"skill\":\"archive\"}}"
+  check "UpdateDocs after DefineFeature" allow \
+    "{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Skill\",\"transcript_path\":\"$tdir/proposed-typed.jsonl\",\"tool_input\":{\"skill\":\"UpdateDocs\"}}"
 
-  check "prose mentioning /apply is not a command" allow \
-    "{\"hook_event_name\":\"UserPromptSubmit\",\"transcript_path\":\"$tdir/proposed-typed.jsonl\",\"prompt\":\"what does /apply do?\"}"
+  check "prose mentioning /WriteCode is not a command" allow \
+    "{\"hook_event_name\":\"UserPromptSubmit\",\"transcript_path\":\"$tdir/proposed-typed.jsonl\",\"prompt\":\"what does /WriteCode do?\"}"
 
   check "missing transcript fails open" allow \
-    '{"hook_event_name":"PreToolUse","tool_name":"Skill","transcript_path":"/nonexistent/t.jsonl","tool_input":{"skill":"apply"}}'
+    '{"hook_event_name":"PreToolUse","tool_name":"Skill","transcript_path":"/nonexistent/t.jsonl","tool_input":{"skill":"WriteCode"}}'
 
   check "unparsable payload fails open" allow \
     'not json at all'

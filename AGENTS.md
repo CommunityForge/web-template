@@ -385,7 +385,7 @@ environment. A stage that fails is reported into the session as context, naming 
 to retry, rather than failing the session.
 
 A cloud session works on a `claude/<name>` branch and has GitHub through its tools rather than
-`gh`. The `/apply` command ends by pushing that branch, opening its pull request and waiting for
+`gh`. The `/WriteCode` command ends by pushing that branch, opening its pull request and waiting for
 the Preview workflow's link, because the pull request is the only thing that publishes anything.
 
 <!-- BEGIN openspec-boundary -->
@@ -407,17 +407,17 @@ plan or design document elsewhere (`docs/plans/`, `docs/specs/`), by file tool o
 redirection, is denied. The denial message names the correct location; follow it rather than
 looking for a way around.
 
-One operational note: `/apply` must run in a fresh chat. When a proposal is complete, tell the
-user to begin a new chat and use `/apply` there — everything needed is on disk, and a large
+One operational note: `/WriteCode` must run in a fresh chat. When a proposal is complete, tell the
+user to begin a new chat and use `/WriteCode` there — everything needed is on disk, and a large
 planning transcript is the main cause of slow apply runs. This is enforced, not advisory: a hook
-at `.claude/hooks/fresh-session-guard.sh` blocks `/apply` in any chat where a proposal ran.
+at `.claude/hooks/fresh-session-guard.sh` blocks `/WriteCode` in any chat where a proposal ran.
 
 Cloud sessions (`CLAUDE_CODE_REMOTE=true`) are the exception: each chat is a fresh sandboxed
-checkout, so the proposal exists only in the chat that wrote it. There the guard allows `/apply`
-and the proposal ends by telling the user to run `/apply` in the same chat.
+checkout, so the proposal exists only in the chat that wrote it. There the guard allows `/WriteCode`
+and the proposal ends by telling the user to run `/WriteCode` in the same chat.
 
 The `.claude/commands/opsx/*.md` commands and `.claude/skills/openspec-*` skills are vendored —
 `openspec update` regenerates them, so never edit them. Local behavior (the lay-facing phase
-endings, the fresh-chat rule, the preview link `/apply` ends with) layers on top instead, in the
-`/propose`, `/apply` and `/archive` alias commands, the hooks, and the Guided output style.
+endings, the fresh-chat rule, the preview link `/WriteCode` ends with) layers on top instead, in the
+`/DefineFeature`, `/WriteCode` and `/UpdateDocs` alias commands, the hooks, and the Guided output style.
 <!-- END openspec-boundary -->

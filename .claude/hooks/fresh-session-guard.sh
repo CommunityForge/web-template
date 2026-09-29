@@ -2,13 +2,13 @@
 # fresh-session-guard.sh — PreToolUse + UserPromptSubmit hook.
 #
 # THIS IS THE ENFORCEMENT MECHANISM for the guided flow's phase boundary:
-# /apply must run in a fresh chat. A session whose transcript shows a propose
+# /WriteCode must run in a fresh chat. A session whose transcript shows a propose
 # invocation may not also apply — everything apply needs is on disk, and a
 # large planning transcript is the main cause of slow, degraded apply runs.
 #
 # Two entry points, because the two clients differ:
 #   PreToolUse (Skill|SlashCommand) — the model invoking apply as a tool.
-#   UserPromptSubmit               — the person typing /apply in a terminal
+#   UserPromptSubmit               — the person typing /WriteCode in a terminal
 #                                    client, where commands never reach
 #                                    PreToolUse.
 #
@@ -27,7 +27,7 @@ set -uo pipefail
 
 # A cloud session (CLAUDE_CODE_REMOTE=true) is sandboxed: a new chat starts
 # from a fresh checkout and the proposal written here is gone, so the guard
-# would make /apply impossible rather than faster. Allow it there.
+# would make /WriteCode impossible rather than faster. Allow it there.
 [ "${CLAUDE_CODE_REMOTE:-}" = "true" ] && exit 0
 
 if [ -n "${CLAUDE_PROJECT_DIR:-}" ] && [ -d "$CLAUDE_PROJECT_DIR/.devshell/bin" ]; then
@@ -46,11 +46,11 @@ field() {
 }
 
 # A propose run leaves one of these in the transcript, and nothing else does:
-# a typed /propose (command-name tag), a Skill invocation of a propose skill
-# (plain or string-escaped JSON), or a SlashCommand invocation of /propose.
-# Prose that merely mentions /propose — like the session-context rule text —
-# matches none of them.
-PROPOSE_EVIDENCE='<command-name>/?(opsx:)?propose</command-name>|"skill"[[:space:]]*:[[:space:]]*"((opsx:)?propose|openspec-propose)"|\\"skill\\":[[:space:]]*\\"((opsx:)?propose|openspec-propose)\\"|"command"[[:space:]]*:[[:space:]]*"/(opsx:)?propose'
+# a typed /DefineFeature (command-name tag), a Skill invocation of a propose
+# skill (plain or string-escaped JSON), or a SlashCommand invocation of
+# /DefineFeature. Prose that merely mentions /DefineFeature — like the
+# session-context rule text — matches none of them.
+PROPOSE_EVIDENCE='<command-name>/?(DefineFeature|opsx:propose)</command-name>|"skill"[[:space:]]*:[[:space:]]*"(DefineFeature|opsx:propose|openspec-propose)"|\\"skill\\":[[:space:]]*\\"(DefineFeature|opsx:propose|openspec-propose)\\"|"command"[[:space:]]*:[[:space:]]*"/(DefineFeature|opsx:propose)'
 
 proposed_in_this_session() {
   TRANSCRIPT="$(field transcript_path)"
@@ -58,7 +58,7 @@ proposed_in_this_session() {
     grep -qE "$PROPOSE_EVIDENCE" "$TRANSCRIPT"
 }
 
-REASON='BLOCKED: /apply cannot run in the chat where the proposal was written.\n\nTell the person: planning happened in this chat, so applying here is not possible. Begin a new chat and use /apply there - a fresh chat is required and makes the work faster and more reliable.'
+REASON='BLOCKED: /WriteCode cannot run in the chat where the proposal was written.\n\nTell the person: planning happened in this chat, so applying here is not possible. Begin a new chat and use /WriteCode there - a fresh chat is required and makes the work faster and more reliable.'
 
 case "$(field hook_event_name)" in
 
@@ -67,7 +67,7 @@ case "$(field hook_event_name)" in
       Skill | SlashCommand)
         NAME="$(field skill)"
         [ -n "$NAME" ] || NAME="$(field command)"
-        if printf '%s' "$NAME" | grep -qE '^/?(opsx:)?apply([[:space:]]|$)|^openspec-apply-change$'; then
+        if printf '%s' "$NAME" | grep -qE '^/?(WriteCode|opsx:apply)([[:space:]]|$)|^openspec-apply-change$'; then
           if proposed_in_this_session; then
             printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"%s"}}\n' "$REASON"
             exit 0
@@ -79,7 +79,7 @@ case "$(field hook_event_name)" in
 
   UserPromptSubmit)
     PROMPT="$(field prompt)"
-    if printf '%s' "$PROMPT" | grep -qE '^[[:space:]]*/(opsx:)?apply([[:space:]]|$)'; then
+    if printf '%s' "$PROMPT" | grep -qE '^[[:space:]]*/(WriteCode|opsx:apply)([[:space:]]|$)'; then
       if proposed_in_this_session; then
         printf '{"decision":"block","reason":"%s"}\n' "$REASON"
         exit 0

@@ -1,5 +1,5 @@
 ---
-description: Apply a change
+description: Write the code for a feature
 ---
 
 Follow the instructions in @.claude/commands/opsx/apply.md exactly, with two amendments.
@@ -41,8 +41,8 @@ in `tasks.md`) with a plain-language testing handoff:
   change's own spec and tasks. Never say "run the tests".
 - End with exactly this sentence and nothing after it:
 
-  "When you have tested it and everything works the way you expect, use `/archive` to file this
-  change away."
+  "When you have tested it and everything works the way you expect, use `/UpdateDocs` to file
+  this change away."
 
 The **Output On Pause (Issue Encountered)** behavior is unchanged.
 
