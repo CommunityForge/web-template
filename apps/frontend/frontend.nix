@@ -8,7 +8,7 @@ _: {
       packages.frontend = buildPnpmPackage {
         hash = "sha256-SQgx4W+bvmUfhK4Lfe0vYU9uhuAngrrttmIxG12VdUU=";
         packageJsonPath = ./package.json;
-        pnpmWorkspaces = [ "@replaceme/frontend" ];
+        pnpmWorkspaces = [ "@landbank/frontend" ];
         extraSrcs = fs.unions [
           ./package.json
           ./tsconfig.json
@@ -26,13 +26,13 @@ _: {
         doCheck = true;
         buildPhase = ''
           runHook preBuild
-          pnpm --filter=@replaceme/frontend build
+          pnpm --filter=@landbank/frontend build
           runHook postBuild
         '';
         checkPhase = ''
           runHook preCheck
-          pnpm --filter=@replaceme/frontend check
-          pnpm --filter=@replaceme/frontend test --run
+          pnpm --filter=@landbank/frontend check
+          pnpm --filter=@landbank/frontend test --run
           oxlint --type-aware --disable-nested-config apps/frontend
           runHook postCheck
         '';

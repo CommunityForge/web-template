@@ -30,5 +30,5 @@ export interface TokenVerifierService {
  * @category services
  */
 export class TokenVerifier extends Context.Service<TokenVerifier, TokenVerifierService>()(
-  "@replaceme/domain/TokenVerifier",
+  "@landbank/domain/TokenVerifier",
 ) {}

@@ -202,13 +202,13 @@ importers:
       '@effect/platform-node':
         specifier: catalog:effect
         version: 4.0.0-rc.116(effect@4.0.0-rc.116)(redis@6.2.1)
-      '@replaceme/db':
+      '@landbank/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@replaceme/domain':
+      '@landbank/domain':
         specifier: workspace:*
         version: link:../../packages/domain
-      '@replaceme/supabase':
+      '@landbank/supabase':
         specifier: workspace:*
         version: link:../../packages/supabase
       effect:
@@ -249,7 +249,7 @@ importers:
       '@effect/vitest':
         specifier: catalog:effect
         version: 4.0.0-rc.116(effect@4.0.0-rc.116)(vitest@5.0.1)
-      '@replaceme/domain':
+      '@landbank/domain':
         specifier: workspace:*
         version: link:../domain
       '@types/node':
@@ -323,7 +323,7 @@ importers:
       '@effect/vitest':
         specifier: catalog:effect
         version: 4.0.0-rc.116(effect@4.0.0-rc.116)(vitest@5.0.1)
-      '@replaceme/domain':
+      '@landbank/domain':
         specifier: workspace:*
         version: link:../domain
       '@types/node':

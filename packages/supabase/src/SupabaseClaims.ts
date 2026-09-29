@@ -26,9 +26,9 @@
  * @since 0.0.0
  */
 
-import * as Auth from "@replaceme/domain/Auth"
-import * as CurrentUser from "@replaceme/domain/CurrentUser"
-import * as User from "@replaceme/domain/User"
+import * as Auth from "@landbank/domain/Auth"
+import * as CurrentUser from "@landbank/domain/CurrentUser"
+import * as User from "@landbank/domain/User"
 import * as Effect from "effect/Effect"
 import { pipe } from "effect/Function"
 import * as Option from "effect/Option"

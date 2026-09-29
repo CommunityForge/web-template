@@ -6,7 +6,7 @@
 
 import type * as SupabaseJs from "@supabase/supabase-js"
 
-import * as Auth from "@replaceme/domain/Auth"
+import * as Auth from "@landbank/domain/Auth"
 import * as Effect from "effect/Effect"
 import { pipe } from "effect/Function"
 import * as Layer from "effect/Layer"

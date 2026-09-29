@@ -1,5 +1,5 @@
 import { layer } from "@effect/vitest"
-import * as Api from "@replaceme/domain/Api"
+import * as Api from "@landbank/domain/Api"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as HttpServer from "effect/unstable/http/HttpServer"

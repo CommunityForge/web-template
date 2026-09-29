@@ -32,7 +32,7 @@
         "namespaceImportPackages": [
           "effect",
           "@effect/*",
-          "@replaceme/*",
+          "@landbank/*",
           "react",
           "react-dom/*",
           "react-router",

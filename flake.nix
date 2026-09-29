@@ -64,10 +64,10 @@
           ...
         }:
         let
-          # Rename on fork. This is the other half of the `@replaceme` npm-scope rename
+          # Rename on fork. This is the other half of the `@landbank` npm-scope rename
           # described in README.md -- the scope `sed` does not reach Nix derivation names,
           # because they cannot contain `@`.
-          projectName = "replaceme";
+          projectName = "landbank";
           pnpm = pkgs.pnpm_10;
           nodejs = pkgs.nodejs-slim_26;
           agentsPkgs = llm-agents.packages.${system};

@@ -106,12 +106,12 @@ export const NewPassword = Schema.Struct({ password: User.Password })
  */
 export type NewPassword = typeof NewPassword.Type
 
-export class InvalidCredentials extends Schema.TaggedError<InvalidCredentials>("@replaceme/domain/InvalidCredentials")(
+export class InvalidCredentials extends Schema.TaggedError<InvalidCredentials>("@landbank/domain/InvalidCredentials")(
   "InvalidCredentials",
   {},
 ) {}
 
-export class EmailNotConfirmed extends Schema.TaggedError<EmailNotConfirmed>("@replaceme/domain/EmailNotConfirmed")(
+export class EmailNotConfirmed extends Schema.TaggedError<EmailNotConfirmed>("@landbank/domain/EmailNotConfirmed")(
   "EmailNotConfirmed",
   {},
 ) {}
@@ -125,7 +125,7 @@ export class EmailNotConfirmed extends Schema.TaggedError<EmailNotConfirmed>("@r
  * @since 0.0.0
  * @category errors
  */
-export class SignUpRejected extends Schema.TaggedError<SignUpRejected>("@replaceme/domain/SignUpRejected")(
+export class SignUpRejected extends Schema.TaggedError<SignUpRejected>("@landbank/domain/SignUpRejected")(
   "SignUpRejected",
   {
     reason: Schema.Literals(["WeakPassword", "SignupsDisabled"]),
@@ -142,7 +142,7 @@ export class SignUpRejected extends Schema.TaggedError<SignUpRejected>("@replace
  * @since 0.0.0
  * @category errors
  */
-export class RateLimited extends Schema.TaggedError<RateLimited>("@replaceme/domain/RateLimited")("RateLimited", {}) {}
+export class RateLimited extends Schema.TaggedError<RateLimited>("@landbank/domain/RateLimited")("RateLimited", {}) {}
 
 /**
  * An emailed link -- confirmation or recovery -- has expired, or has already been used.
@@ -153,7 +153,7 @@ export class RateLimited extends Schema.TaggedError<RateLimited>("@replaceme/dom
  * @since 0.0.0
  * @category errors
  */
-export class LinkInvalid extends Schema.TaggedError<LinkInvalid>("@replaceme/domain/LinkInvalid")("LinkInvalid", {}) {}
+export class LinkInvalid extends Schema.TaggedError<LinkInvalid>("@landbank/domain/LinkInvalid")("LinkInvalid", {}) {}
 
 /**
  * A client-side session: the authenticated user and the credential's expiry.
@@ -165,7 +165,7 @@ export class LinkInvalid extends Schema.TaggedError<LinkInvalid>("@replaceme/dom
  * @since 0.0.0
  * @category models
  */
-export class Session extends Schema.Class<Session>("@replaceme/domain/Session")({
+export class Session extends Schema.Class<Session>("@landbank/domain/Session")({
   user: User.User,
   expiresAt: Schema.DateTimeUtc,
 }) {}
@@ -176,7 +176,7 @@ export class Session extends Schema.Class<Session>("@replaceme/domain/Session")(
  * @since 0.0.0
  * @category errors
  */
-export class AuthError extends Schema.TaggedError<AuthError>("@replaceme/domain/AuthError")("AuthError", {
+export class AuthError extends Schema.TaggedError<AuthError>("@landbank/domain/AuthError")("AuthError", {
   message: Schema.String,
   cause: Schema.optional(Schema.Unknown),
 }) {}
@@ -187,7 +187,7 @@ export class AuthError extends Schema.TaggedError<AuthError>("@replaceme/domain/
  * @since 0.0.0
  * @category errors
  */
-export class Unauthorized extends Schema.TaggedError<Unauthorized>("@replaceme/domain/Unauthorized")(
+export class Unauthorized extends Schema.TaggedError<Unauthorized>("@landbank/domain/Unauthorized")(
   "Unauthorized",
   {},
   { httpApiStatus: 401 },
@@ -284,4 +284,4 @@ export interface AuthService {
  * @since 0.0.0
  * @category services
  */
-export class Auth extends Context.Service<Auth, AuthService>()("@replaceme/domain/Auth") {}
+export class Auth extends Context.Service<Auth, AuthService>()("@landbank/domain/Auth") {}

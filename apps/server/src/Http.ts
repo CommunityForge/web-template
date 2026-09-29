@@ -8,7 +8,7 @@
  * @since 0.0.0
  */
 
-import * as Api from "@replaceme/domain/Api"
+import * as Api from "@landbank/domain/Api"
 import * as Config from "effect/Config"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"

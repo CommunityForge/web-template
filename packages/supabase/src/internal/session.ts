@@ -6,8 +6,8 @@
 
 import type * as SupabaseJs from "@supabase/supabase-js"
 
-import * as Auth from "@replaceme/domain/Auth"
-import * as User from "@replaceme/domain/User"
+import * as Auth from "@landbank/domain/Auth"
+import * as User from "@landbank/domain/User"
 import * as DateTime from "effect/DateTime"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"

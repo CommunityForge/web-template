@@ -13,8 +13,8 @@ _: {
         # The unit and its one workspace dependency: `tsc -b` builds the referenced project
         # first, so its sources have to be in the sandbox too.
         pnpmWorkspaces = [
-          "@replaceme/supabase"
-          "@replaceme/domain"
+          "@landbank/supabase"
+          "@landbank/domain"
         ];
         # Explicit rather than bare directories: a bare directory sweeps node_modules/, dist/
         # and tsbuildinfo into the sandbox, and a stale dist/ would silently satisfy `tsc -b`
@@ -36,13 +36,13 @@ _: {
         doCheck = true;
         buildPhase = ''
           runHook preBuild
-          pnpm --filter=@replaceme/supabase build
+          pnpm --filter=@landbank/supabase build
           runHook postBuild
         '';
         checkPhase = ''
           runHook preCheck
-          pnpm --filter=@replaceme/supabase check
-          pnpm --filter=@replaceme/supabase test --run
+          pnpm --filter=@landbank/supabase check
+          pnpm --filter=@landbank/supabase test --run
           # `--disable-nested-config` stops oxlint discovering `.repos/effect/.oxlintrc.json`,
           # which declares a JS plugin that is not installed.
           oxlint --type-aware --disable-nested-config packages/supabase

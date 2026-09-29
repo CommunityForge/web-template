@@ -2,7 +2,7 @@
  * @since 0.0.0
  */
 
-import * as Api from "@replaceme/domain/Api"
+import * as Api from "@landbank/domain/Api"
 import * as Effect from "effect/Effect"
 import * as HttpApiBuilder from "effect/unstable/httpapi/HttpApiBuilder"
 

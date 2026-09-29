@@ -1,5 +1,5 @@
 {
-  "name": "@replaceme/lib",
+  "name": "@landbank/lib",
   "version": "0.0.0",
   "private": true,
   "description": "Core library",

@@ -1,7 +1,7 @@
 # packages/supabase
 
 Effect bindings for `supabase-js`, and nothing else. The package owns the _shape_ of a Supabase token and session;
-what those claims mean is `@replaceme/domain`'s business, and `@replaceme/domain` is the only workspace dependency.
+what those claims mean is `@landbank/domain`'s business, and `@landbank/domain` is the only workspace dependency.
 
 | Module           | Owns                                                                                  |
 | ---------------- | ------------------------------------------------------------------------------------- |

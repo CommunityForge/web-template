@@ -14,4 +14,4 @@ export const Http = HttpApi.make("api")
   //
   .add(TopLevelApi)
   .prefix("/api")
-  .annotate(OpenApi.Title, "Replaceme API")
+  .annotate(OpenApi.Title, "Wilkinsburg Land Bank API")

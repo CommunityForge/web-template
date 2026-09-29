@@ -10,7 +10,7 @@ _: {
         # real hash to paste back in.
         hash = "sha256-9bcoU1YiTDjkPCixTw6U0RAxnHOpDnvwzaBLPf7Z7Ls=";
         packageJsonPath = ./package.json;
-        pnpmWorkspaces = [ "@replaceme/lib" ];
+        pnpmWorkspaces = [ "@landbank/lib" ];
         # Explicit rather than `fs.unions [ ./. ]`: a bare directory sweeps node_modules/,
         # dist/ and tsbuildinfo into the sandbox, which only looks clean because git-tracked
         # filtering hides it. A stale dist/ would silently satisfy `tsc -b` incrementality.
@@ -28,13 +28,13 @@ _: {
         doCheck = true;
         buildPhase = ''
           runHook preBuild
-          pnpm --filter=@replaceme/lib build
+          pnpm --filter=@landbank/lib build
           runHook postBuild
         '';
         checkPhase = ''
           runHook preCheck
-          pnpm --filter=@replaceme/lib check
-          pnpm --filter=@replaceme/lib test --run
+          pnpm --filter=@landbank/lib check
+          pnpm --filter=@landbank/lib test --run
           # `--disable-nested-config` stops oxlint discovering `.repos/effect/.oxlintrc.json`,
           # which declares a JS plugin that is not installed.
           oxlint --type-aware --disable-nested-config packages/lib

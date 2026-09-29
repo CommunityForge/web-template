@@ -6,16 +6,16 @@ A Vite + React 19 + Tailwind 4 single-page app.
 
 All of these assume the dev shell (`direnv allow`, or `nix develop -c <cmd>`).
 
-| Command                                      | What it does                                    |
-| -------------------------------------------- | ----------------------------------------------- |
-| `pnpm --filter=@replaceme/frontend dev`      | Vite dev server with HMR                        |
-| `pnpm --filter=@replaceme/frontend build`    | `tsc -b` then `vite build` → `dist/`            |
-| `pnpm --filter=@replaceme/frontend preview`  | Serve the built `dist/` locally                 |
-| `pnpm --filter=@replaceme/frontend check`    | Type-check only, no emit                        |
-| `pnpm --filter=@replaceme/frontend test`     | Vitest under happy-dom                          |
-| `pnpm --filter=@replaceme/frontend coverage` | Same, with v8 coverage                          |
-| `pnpm --filter=@replaceme/frontend lint`     | oxlint                                          |
-| `nix build .#frontend`                       | Reproducible build; `$out` is the static bundle |
+| Command                                     | What it does                                    |
+| ------------------------------------------- | ----------------------------------------------- |
+| `pnpm --filter=@landbank/frontend dev`      | Vite dev server with HMR                        |
+| `pnpm --filter=@landbank/frontend build`    | `tsc -b` then `vite build` → `dist/`            |
+| `pnpm --filter=@landbank/frontend preview`  | Serve the built `dist/` locally                 |
+| `pnpm --filter=@landbank/frontend check`    | Type-check only, no emit                        |
+| `pnpm --filter=@landbank/frontend test`     | Vitest under happy-dom                          |
+| `pnpm --filter=@landbank/frontend coverage` | Same, with v8 coverage                          |
+| `pnpm --filter=@landbank/frontend lint`     | oxlint                                          |
+| `nix build .#frontend`                      | Reproducible build; `$out` is the static bundle |
 
 ## Layout
 

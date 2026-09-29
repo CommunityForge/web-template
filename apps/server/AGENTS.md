@@ -1,6 +1,6 @@
 # apps/server
 
-The HTTP API that implements the contract `@replaceme/domain` declares, and the Cloudflare Worker that serves it
+The HTTP API that implements the contract `@landbank/domain` declares, and the Cloudflare Worker that serves it
 beside the SPA. It owns no wire shape, no endpoint definition, no error class and no table. What it owns is the
 **composition root** (which layers meet at startup, and in what order), one thin **feature service** per API group,
 the **`TokenVerifier`** implementation that turns a bearer token into a principal, and the **Worker** that is the
@@ -14,7 +14,7 @@ production deployment. Nothing here is exported for another package to import.
 | `Worker.ts`            | `SqlRequestLive`, `configProvider(env)`, `AppLive(env)`, and `export default { fetch }` |
 | `Auth.ts`              | `AuthLive`: the auth middleware over a Supabase-bound `TokenVerifier`                   |
 | `JwksTokenVerifier.ts` | `TokenVerifier` over a remote JWKS: issuer, audience, algorithms all required           |
-| `Sql.ts`               | Re-export of `@replaceme/db`'s `PgLive` and `PgUrlLive`, so every feature names one     |
+| `Sql.ts`               | Re-export of `@landbank/db`'s `PgLive` and `PgUrlLive`, so every feature names one      |
 | `TopLevel/Http.ts`     | `/api/health`                                                                           |
 
 ## Two entry points over one portable core

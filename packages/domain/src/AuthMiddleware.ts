@@ -31,7 +31,7 @@ export class AuthMiddleware extends HttpApiMiddleware.Service<
     provides: CurrentUser.CurrentUser
     clientError: Auth.Unauthorized
   }
->()("@replaceme/domain/AuthMiddleware", {
+>()("@landbank/domain/AuthMiddleware", {
   error: Auth.Unauthorized,
   security: { bearer: HttpApiSecurity.bearer },
   requiredForClient: true,

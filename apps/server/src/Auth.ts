@@ -5,10 +5,10 @@
  * @since 0.0.0
  */
 
-import type * as TokenVerifier from "@replaceme/domain/TokenVerifier"
+import type * as TokenVerifier from "@landbank/domain/TokenVerifier"
 
-import * as AuthMiddleware from "@replaceme/domain/AuthMiddleware"
-import * as SupabaseClaims from "@replaceme/supabase/SupabaseClaims"
+import * as AuthMiddleware from "@landbank/domain/AuthMiddleware"
+import * as SupabaseClaims from "@landbank/supabase/SupabaseClaims"
 import * as Config from "effect/Config"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"

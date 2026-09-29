@@ -7,8 +7,8 @@
  */
 
 import { assert, describe, it } from "@effect/vitest"
-import * as CurrentUser from "@replaceme/domain/CurrentUser"
-import * as SupabaseClaims from "@replaceme/supabase/SupabaseClaims"
+import * as CurrentUser from "@landbank/domain/CurrentUser"
+import * as SupabaseClaims from "@landbank/supabase/SupabaseClaims"
 import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"
 import * as Result from "effect/Result"

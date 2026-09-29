@@ -12,11 +12,11 @@
  * A failed assumption here fails the test it is written in, which is the check a `.make` would otherwise provide. */
 /* eslint-disable typescript/no-unsafe-type-assertion */
 
-import type * as User from "@replaceme/domain/User"
+import type * as User from "@landbank/domain/User"
 
 import { assert, describe, it } from "@effect/vitest"
-import * as Auth from "@replaceme/domain/Auth"
-import * as SupabaseAuth from "@replaceme/supabase/SupabaseAuth"
+import * as Auth from "@landbank/domain/Auth"
+import * as SupabaseAuth from "@landbank/supabase/SupabaseAuth"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Redacted from "effect/Redacted"

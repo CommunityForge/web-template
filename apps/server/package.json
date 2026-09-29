@@ -1,5 +1,5 @@
 {
-  "name": "@replaceme/server",
+  "name": "@landbank/server",
   "version": "0.0.0",
   "private": true,
   "description": "The HTTP API server",
@@ -14,9 +14,9 @@
   },
   "dependencies": {
     "@effect/platform-node": "catalog:effect",
-    "@replaceme/db": "workspace:*",
-    "@replaceme/domain": "workspace:*",
-    "@replaceme/supabase": "workspace:*",
+    "@landbank/db": "workspace:*",
+    "@landbank/domain": "workspace:*",
+    "@landbank/supabase": "workspace:*",
     "effect": "catalog:effect",
     "jose": "^6.2.3"
   },

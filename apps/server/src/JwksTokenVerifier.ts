@@ -4,10 +4,10 @@
  * @since 0.0.0
  */
 
-import type * as CurrentUser from "@replaceme/domain/CurrentUser"
+import type * as CurrentUser from "@landbank/domain/CurrentUser"
 
-import * as Auth from "@replaceme/domain/Auth"
-import * as TokenVerifier from "@replaceme/domain/TokenVerifier"
+import * as Auth from "@landbank/domain/Auth"
+import * as TokenVerifier from "@landbank/domain/TokenVerifier"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Redacted from "effect/Redacted"

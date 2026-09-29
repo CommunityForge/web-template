@@ -4,4 +4,4 @@
  * @since 0.0.0
  */
 
-export { config, PgLive, PgUrlLive, urlConfig } from "@replaceme/db/Pg"
+export { config, PgLive, PgUrlLive, urlConfig } from "@landbank/db/Pg"

@@ -46,7 +46,7 @@ interface Violation {
  * The audit's own failure: at least one exposed table is reachable without row security. The violations are already
  * logged in full by the time this fails, so it carries only the count.
  */
-class DataApiExposed extends Schema.TaggedError<DataApiExposed>("@replaceme/db/DataApiExposed")("DataApiExposed", {
+class DataApiExposed extends Schema.TaggedError<DataApiExposed>("@landbank/db/DataApiExposed")("DataApiExposed", {
   violations: Schema.Int,
 }) {}
 

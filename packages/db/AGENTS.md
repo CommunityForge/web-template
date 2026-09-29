@@ -4,7 +4,7 @@ Postgres: the client layer (`Pg`), the schema (DDL authored in TypeScript and ap
 standing exposure audit (`bin/audit.ts`), and the repositories over the tables, one module per table family. It ships
 no table today; the recipe below is what the first one follows.
 
-`@replaceme/domain` is the one workspace dependency: repositories are typed in terms of the domain's branded ids and
+`@landbank/domain` is the one workspace dependency: repositories are typed in terms of the domain's branded ids and
 never re-declare a shape. The database is named one of two ways through the ambient `ConfigProvider`, with no defaults,
 so a missing credential stops the process rather than quietly connecting somewhere: the five `DB_*` variables
 (`DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWD`, `DB_DATABASE`) as `Pg.PgLive`, or one `DB_URL` connection string as
@@ -44,7 +44,7 @@ export class ThingRepo extends Context.Service<
       userId: User.UserId,
     ) => Effect.Effect<ReadonlyArray<Thing>, SqlError.SqlError | Schema.SchemaError>
   }
->()("@replaceme/db/ThingRepo", {
+>()("@landbank/db/ThingRepo", {
   make: Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient
     const rows = SqlSchema.findAll({ Request: User.UserId, Result: ThingRow, execute: (userId) => sql`...` })

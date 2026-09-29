@@ -31,10 +31,10 @@
         # The app and its workspace dependency closure: `tsc -b` follows the app's `references`,
         # so every referenced project's sources have to be in the sandbox.
         pnpmWorkspaces = [
-          "@replaceme/server"
-          "@replaceme/db"
-          "@replaceme/domain"
-          "@replaceme/supabase"
+          "@landbank/server"
+          "@landbank/db"
+          "@landbank/domain"
+          "@landbank/supabase"
         ];
         # Explicit rather than bare directories: a bare directory sweeps node_modules/, dist/
         # and tsbuildinfo into the sandbox, and a stale dist/ would silently satisfy `tsc -b`
@@ -62,13 +62,13 @@
         doCheck = true;
         buildPhase = ''
           runHook preBuild
-          pnpm --filter=@replaceme/server build
+          pnpm --filter=@landbank/server build
           runHook postBuild
         '';
         checkPhase = ''
           runHook preCheck
-          pnpm --filter=@replaceme/server check
-          pnpm --filter=@replaceme/server test --run
+          pnpm --filter=@landbank/server check
+          pnpm --filter=@landbank/server test --run
           # `--disable-nested-config` stops oxlint discovering `.repos/effect/.oxlintrc.json`,
           # which declares a JS plugin that is not installed.
           oxlint --type-aware --disable-nested-config apps/server
@@ -93,7 +93,7 @@
       # Worker serves both from one origin. This is the ONE place the server unit depends on the
       # frontend, and it is Nix-only -- pnpm never links the two, so the frontend stays a bundler
       # leaf. `checks` picks this up with every other package.
-      packages.server-worker = pkgs.runCommand "replaceme-server-worker" { } ''
+      packages.server-worker = pkgs.runCommand "landbank-server-worker" { } ''
         mkdir -p $out
         cp ${config.packages.server}/worker.js $out/worker.js
         cp -r ${config.packages.frontend} $out/assets
@@ -200,7 +200,7 @@
         # separating them with commas.
         appOrigin = lib.mkOption {
           type = lib.types.str;
-          default = "https://example.org";
+          default = "https://app.wilkinsburglandbank.org";
         };
         supabaseUrl = lib.mkOption {
           type = lib.types.str;

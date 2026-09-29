@@ -13,7 +13,7 @@ export type Password = typeof Password.Type
 export const UserId = Schema.String.pipe(Schema.check(Schema.isUUID()), Schema.brand("UserId"))
 export type UserId = typeof UserId.Type
 
-export class User extends Schema.TaggedClass<User>("@replaceme/domain/User")("User", {
+export class User extends Schema.TaggedClass<User>("@landbank/domain/User")("User", {
   id: UserId,
   email: Schema.Option(Schema.Trimmed.pipe(Schema.check(Schema.isNonEmpty()))),
   createdAt: Schema.Union([Schema.DateTimeUtcFromString, Schema.DateTimeUtc]),
@@ -23,7 +23,7 @@ export class User extends Schema.TaggedClass<User>("@replaceme/domain/User")("Us
  * A guest identity, as distinct from an account.
  *
  * The absent address is the only signal a browser has: GoTrue reports an anonymous user with an email that is present
- * and empty, which `@replaceme/supabase`'s session decoder lifts to `None` precisely so the two are distinguishable.
+ * and empty, which `@landbank/supabase`'s session decoder lifts to `None` precisely so the two are distinguishable.
  * Both identities carry the same `authenticated` role, so the role cannot be asked.
  *
  * @since 0.0.0
@@ -37,6 +37,6 @@ export const isAnonymous = (user: User): boolean => Option.isNone(user.email)
  */
 export const isMember: (user: User) => boolean = Predicate.not(isAnonymous)
 
-export class UserNotFound extends Schema.TaggedError<UserNotFound>("@replaceme/domain/UserNotFound")("UserNotFound", {
+export class UserNotFound extends Schema.TaggedError<UserNotFound>("@landbank/domain/UserNotFound")("UserNotFound", {
   id: UserId,
 }) {}

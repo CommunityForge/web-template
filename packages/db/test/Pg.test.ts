@@ -1,7 +1,7 @@
 import * as PgTypes from "@effect/sql-pg/PgTypes"
 import { describe, it } from "@effect/vitest"
 import { assertFailure, assertSuccess } from "@effect/vitest/utils"
-import * as Pg from "@replaceme/db/Pg"
+import * as Pg from "@landbank/db/Pg"
 
 // OID 40000: its wire bytes hold 0x9c, a UTF-8 continuation byte with no lead byte, so a
 // registry that reads them as text rejects the row. Any table created after enough others

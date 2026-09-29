@@ -1,5 +1,5 @@
 {
-  "name": "@replaceme/supabase",
+  "name": "@landbank/supabase",
   "version": "0.0.0",
   "description": "An Effect Supabase adapter",
   "license": "MIT",
@@ -37,12 +37,12 @@
   },
   "devDependencies": {
     "@effect/vitest": "catalog:effect",
-    "@replaceme/domain": "workspace:*",
+    "@landbank/domain": "workspace:*",
     "@types/node": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   },
   "peerDependencies": {
-    "@replaceme/domain": "workspace:^"
+    "@landbank/domain": "workspace:^"
   }
 }

@@ -18,21 +18,21 @@ Every placeholder is one of four tokens. Substitute them in this order, over eve
 except `node_modules`, `.git`, `.direnv`, `dist`, `.repos` and `pnpm-lock.yaml`
 (`sed -i ''` is BSD/macOS; on GNU sed drop the `''`):
 
-| Token         | Is                                | Replace with     | Form                          |
-| ------------- | --------------------------------- | ---------------- | ----------------------------- |
-| `@replaceme`  | The npm scope                     | `@yourscope`     | literal                       |
-| `replaceme`   | The slug: Nix names               | `yourslug`       | word-bounded: `\breplaceme\b` |
-| `Replaceme`   | The display name: page title, API | `Your Name`      | literal                       |
-| `example.org` | The production domain             | `yourdomain.tld` | literal                       |
+| Token                         | Is                                | Replace with     | Form                          |
+| ----------------------------- | --------------------------------- | ---------------- | ----------------------------- |
+| `@landbank`                   | The npm scope                     | `@yourscope`     | literal                       |
+| `landbank`                    | The slug: Nix names               | `yourslug`       | word-bounded: `\breplaceme\b` |
+| `Wilkinsburg Land Bank`       | The display name: page title, API | `Your Name`      | literal                       |
+| `app.wilkinsburglandbank.org` | The production domain             | `yourdomain.tld` | literal                       |
 
 The slug is word-bounded because "replacement" appears in vendored documents; a bare substitution
 would rewrite it. The scope runs first so the slug pass does not see it.
 
 ```sh
 files() { git ls-files | grep -v '^pnpm-lock.yaml$'; }
-files | xargs sed -i '' 's|@replaceme|@yourscope|g'
+files | xargs sed -i '' 's|@landbank|@yourscope|g'
 files | xargs sed -i '' -E 's/\breplaceme\b/yourslug/g'
-files | xargs sed -i '' 's|Replaceme|Your Name|g'
+files | xargs sed -i '' 's|Wilkinsburg Land Bank|Your Name|g'
 files | xargs sed -i '' 's|example\.org|yourdomain.tld|g'
 pnpm install
 ```

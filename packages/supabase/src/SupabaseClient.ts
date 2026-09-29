@@ -23,7 +23,7 @@
 import type * as SupabaseJs from "@supabase/supabase-js"
 import type * as Scope from "effect/Scope"
 
-import * as Auth from "@replaceme/domain/Auth"
+import * as Auth from "@landbank/domain/Auth"
 import { createClient } from "@supabase/supabase-js"
 import * as Config from "effect/Config"
 import * as Context from "effect/Context"
@@ -88,7 +88,7 @@ export interface SupabaseClientService {
  * @category services
  */
 export class SupabaseClient extends Context.Service<SupabaseClient, SupabaseClientService>()(
-  "@replaceme/supabase/SupabaseClient",
+  "@landbank/supabase/SupabaseClient",
 ) {}
 
 /**

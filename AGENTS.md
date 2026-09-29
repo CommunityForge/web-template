@@ -189,8 +189,8 @@ as the odd one out:
   `undefined` is the habit this displaces.
 - **Layers read config; they are not functions of it.** Every layer looks its values up through the ambient
   `ConfigProvider`. No `Config.withDefault`: the launcher names every value, and a missing one stops the process.
-- **Identifiers are fully qualified**: `"@replaceme/<pkg>/<Module>"` on every `Schema.Class`, `TaggedError` and
-  `Context.Service`, with a folder carried (`"@replaceme/domain/TopLevel/Api"`). Renaming the scope renames the prefix
+- **Identifiers are fully qualified**: `"@landbank/<pkg>/<Module>"` on every `Schema.Class`, `TaggedError` and
+  `Context.Service`, with a folder carried (`"@landbank/domain/TopLevel/Api"`). Renaming the scope renames the prefix
   and nothing else.
 - **Every `@since` reads `0.0.0`**, uniformly, because nothing is published and the tag has no referent yet. A full
   JSDoc block on every public export, with `@since` and `@category`.

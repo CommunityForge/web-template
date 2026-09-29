@@ -1,5 +1,5 @@
 {
-  "name": "@replaceme/monorepo",
+  "name": "@landbank/monorepo",
   "private": true,
   "type": "module",
   "scripts": {

@@ -86,4 +86,4 @@ export const isAnonymous = <AppMetadata>(principal: AuthPrincipal<AppMetadata>):
  * @since 0.0.0
  * @category services
  */
-export class CurrentUser extends Context.Service<CurrentUser, AuthPrincipal>()("@replaceme/domain/CurrentUser") {}
+export class CurrentUser extends Context.Service<CurrentUser, AuthPrincipal>()("@landbank/domain/CurrentUser") {}
