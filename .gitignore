@@ -42,3 +42,6 @@ result-*
 !.claude/output-styles
 !.claude/launch.json
 .agents/skills/*-workspace/
+
+# hooks: the dev shell writes this as a link into the Nix store; it is generated, never committed
+/.pre-commit-config.yaml
