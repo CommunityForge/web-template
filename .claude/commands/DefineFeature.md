@@ -2,10 +2,17 @@
 description: Define a feature
 ---
 
-Follow the instructions in @.claude/commands/opsx/propose.md exactly, with one amendment to its
-**Output** section:
+Follow the instructions in @.claude/commands/opsx/propose.md exactly, with two amendments.
 
-After completing all artifacts, do not enumerate artifacts, files, or paths. Instead:
+**Amendment 1 — save the proposal in a cloud session.** Check with `echo "$CLAUDE_CODE_REMOTE"`. If
+it prints `true`, the checkout is temporary and a new chat will not see it, so once every artifact
+is written and every open question is settled: commit the change folder with a conventional message
+(`docs(openspec): propose <name>`) and push the session's branch, `git push -u origin <branch>`. Open
+no pull request: a push is a save, a pull request is a review. Locally nothing is committed here;
+the disk is durable and `/WriteCode` publishes later.
+
+**Amendment 2 — the Output section.** After completing all artifacts, do not enumerate artifacts,
+files, or paths. Instead:
 
 - Give a short plain-language summary of what the proposed change will let the person do, and
   name the change folder once so it can be referred to later.
@@ -18,9 +25,9 @@ After completing all artifacts, do not enumerate artifacts, files, or paths. Ins
 Beginning a new chat before `/WriteCode` is mandatory, not a suggestion — a hook blocks
 `/WriteCode` in this chat. Never offer to apply the change from this chat.
 
-The one exception is a cloud session, where a new chat starts from a fresh checkout and the
-proposal would be lost. Check with `echo "$CLAUDE_CODE_REMOTE"`; if it prints `true`, end instead
-with exactly this sentence and nothing after it:
+The one exception is a cloud session (`CLAUDE_CODE_REMOTE` printed `true` above), where a new chat
+starts from a fresh checkout. There, after the save in amendment 1, end instead with exactly this
+sentence and nothing after it:
 
 "When you are satisfied with the specification, use `/WriteCode` in this chat to realize the
 changes."
