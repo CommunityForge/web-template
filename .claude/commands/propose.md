@@ -18,4 +18,10 @@ After completing all artifacts, do not enumerate artifacts, files, or paths. Ins
 Beginning a new chat before `/apply` is mandatory, not a suggestion — a hook blocks `/apply` in
 this chat. Never offer to apply the change from this chat.
 
+The one exception is a cloud session, where a new chat starts from a fresh checkout and the
+proposal would be lost. Check with `echo "$CLAUDE_CODE_REMOTE"`; if it prints `true`, end instead
+with exactly this sentence and nothing after it:
+
+"When you are satisfied with the specification, use `/apply` in this chat to realize the changes."
+
 ARGUMENTS: $ARGUMENTS

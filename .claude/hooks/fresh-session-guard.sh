@@ -25,6 +25,11 @@
 
 set -uo pipefail
 
+# A cloud session (CLAUDE_CODE_REMOTE=true) is sandboxed: a new chat starts
+# from a fresh checkout and the proposal written here is gone, so the guard
+# would make /apply impossible rather than faster. Allow it there.
+[ "${CLAUDE_CODE_REMOTE:-}" = "true" ] && exit 0
+
 if [ -n "${CLAUDE_PROJECT_DIR:-}" ] && [ -d "$CLAUDE_PROJECT_DIR/.devshell/bin" ]; then
   PATH="$CLAUDE_PROJECT_DIR/.devshell/bin:$PATH"
 fi
