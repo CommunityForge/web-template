@@ -14,9 +14,12 @@ implements the contract (`apps/server`), a Vite + React 19 + Tailwind 4 SPA shel
 
 ## Renaming on fork
 
-Every placeholder is one of four tokens. Substitute them in this order, over every tracked file
-except `node_modules`, `.git`, `.direnv`, `dist`, `.repos` and `pnpm-lock.yaml`
-(`sed -i ''` is BSD/macOS; on GNU sed drop the `''`):
+Every placeholder is one of four tokens. Substitute them in this order, over every tracked regular
+file except `pnpm-lock.yaml`. Run the recipe from the dev shell (`direnv allow`, or
+`nix develop`): its `sed` is GNU sed on every platform, which the bare `-i` and the `\b` in the slug
+pass rely on. The file list keeps only regular files (mode `100…`) ON PURPOSE — `git ls-files` also
+lists the symlinks under `.claude/skills` and the submodules under `.repos`, and one of those makes
+`sed` abort the whole batch, leaving every file after it untouched:
 
 | Token         | Is                                | Replace with     | Form                          |
 | ------------- | --------------------------------- | ---------------- | ----------------------------- |
@@ -29,11 +32,11 @@ The slug is word-bounded because "replacement" appears in vendored documents; a 
 would rewrite it. The scope runs first so the slug pass does not see it.
 
 ```sh
-files() { git ls-files | grep -v '^pnpm-lock.yaml$'; }
-files | xargs sed -i '' 's|@replaceme|@yourscope|g'
-files | xargs sed -i '' -E 's/\breplaceme\b/yourslug/g'
-files | xargs sed -i '' 's|Replaceme|Your Name|g'
-files | xargs sed -i '' 's|example\.org|yourdomain.tld|g'
+files() { git ls-files -s | awk -F'\t' '$1 ~ /^100/ { print $2 }' | grep -v '^pnpm-lock.yaml$'; }
+files | xargs sed -i 's|@replaceme|@yourscope|g'
+files | xargs sed -i -E 's/\breplaceme\b/yourslug/g'
+files | xargs sed -i 's|Replaceme|Your Name|g'
+files | xargs sed -i 's|example\.org|yourdomain.tld|g'
 pnpm install
 ```
 
