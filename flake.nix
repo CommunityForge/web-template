@@ -176,10 +176,13 @@
                 stages = [ "pre-commit" ];
               };
 
-              flake-check = {
+              # The cheap checks only (formatting, spelling, workflow lint). `nix flake check`
+              # would build every package too, which is CI's job and takes longer on one core
+              # than a push should wait -- an agent's tool call gives up on the push first.
+              pre-push-check = {
                 enable = true;
-                name = "nix flake check";
-                entry = "nix flake check";
+                name = "pre-push checks";
+                entry = "bin/pre-push-check.sh";
                 pass_filenames = false;
                 stages = [ "pre-push" ];
               };

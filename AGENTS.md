@@ -29,19 +29,20 @@ oxfmt, tsgolint and typos all come from Nix rather than npm, so there is one sou
 tool versions and no native postinstall to run inside the build sandbox. Consequently there is no
 `packageManager` field and no `.nvmrc`.
 
-| Command                     | What it does                                                             |
-| --------------------------- | ------------------------------------------------------------------------ |
-| `pnpm check`                | `tsc -b tsconfig.json` — type-checks the whole graph, sources and tests  |
-| `pnpm build`                | Builds every unit's `dist/` (`tsc -b`, then Babel for `/*#__PURE__*/`)   |
-| `pnpm test`                 | Vitest across all workspace units                                        |
-| `pnpm test:types`           | tstyche type tests (`test/**/*.tst.ts`) in every unit that has them      |
-| `pnpm coverage`             | Same, with v8 coverage                                                   |
-| `pnpm lint`                 | oxlint, including the type-aware tsgolint pass                           |
-| `pnpm clean`                | Removes `dist/`, `coverage/`, `*.tsbuildinfo`                            |
-| `nix fmt`                   | treefmt — see "Formatting" below for what it actually covers             |
-| `nix flake check`           | `formatting`, `spellcheck` (typos)                                       |
-| `nix build .#<unit>`        | Reproducible build of one unit; its `checkPhase` re-runs check/test/lint |
-| `nix build .#server-worker` | The deployable Worker: `worker.js` beside the frontend's `assets/`       |
+| Command                     | What it does                                                                                |
+| --------------------------- | ------------------------------------------------------------------------------------------- |
+| `pnpm check`                | `tsc -b tsconfig.json` — type-checks the whole graph, sources and tests                     |
+| `pnpm build`                | Builds every unit's `dist/` (`tsc -b`, then Babel for `/*#__PURE__*/`)                      |
+| `pnpm test`                 | Vitest across all workspace units                                                           |
+| `pnpm test:types`           | tstyche type tests (`test/**/*.tst.ts`) in every unit that has them                         |
+| `pnpm coverage`             | Same, with v8 coverage                                                                      |
+| `pnpm lint`                 | oxlint, including the type-aware tsgolint pass                                              |
+| `pnpm clean`                | Removes `dist/`, `coverage/`, `*.tsbuildinfo`                                               |
+| `nix fmt`                   | treefmt — see "Formatting" below for what it actually covers                                |
+| `nix flake check`           | Every check: `formatting`, `spellcheck`, `actionlint`, `psparse`, and a build of every unit |
+| `bin/pre-push-check.sh`     | The cheap checks only: `formatting`, `spellcheck`, `actionlint`. The pre-push git hook      |
+| `nix build .#<unit>`        | Reproducible build of one unit; its `checkPhase` re-runs check/test/lint                    |
+| `nix build .#server-worker` | The deployable Worker: `worker.js` beside the frontend's `assets/`                          |
 
 ### Formatting
 
@@ -52,6 +53,18 @@ launcher) run without a build: `pnpm exec tsx <file>`.
 treefmt module claims `*.md`, `*.yaml`, `*.json`, `*.jsonc`, `*.css` and `*.html` as well, so
 Markdown and YAML in this repo are formatted, not free-form. Do not hand-wrap Markdown; let
 `nix fmt` do it. `.oxfmtrc.json` holds the style and is shared with the editor.
+
+### Git hooks
+
+Entering the dev shell installs two git hooks and writes `.pre-commit-config.yaml`, a link into
+the Nix store that describes them. That file is generated and ignored, never committed — the
+store path changes with every flake bump and every hook change, so a tracked copy is a dirty tree
+in every checkout on a different lock. The hooks are `nix fmt` at commit, and
+`bin/pre-push-check.sh` at push. The push
+gate runs the cheap checks only — formatting, spelling, workflow lint — ON PURPOSE: `nix flake
+check` also builds every unit, which CI does on the pull request anyway and which takes longer
+on one core than a push can wait. A commit whose files the formatter changed fails once; stage
+the reformatted files and commit again.
 
 ## Layout
 
