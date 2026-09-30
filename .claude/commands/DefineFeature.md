@@ -16,6 +16,10 @@ files, or paths. Instead:
 
 - Give a short plain-language summary of what the proposed change will let the person do, and
   name the change folder once so it can be referred to later.
+- Every message that ends with a `/WriteCode` sentence below lists, before that sentence and in
+  full, every ASSUMED line from the change's `discovery.md`, re-read from disk, in plain chat text
+  — never inside a question tool. If `discovery.md` records none, say in one line that nothing was
+  assumed. The person approves the assumptions by moving on, so they must see them first.
 - Then, once the person has nothing further to add and every open question is settled, end with
   exactly this sentence and nothing after it:
 

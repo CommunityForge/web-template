@@ -144,6 +144,21 @@ artifacts:
       ASSUMED, phrased with the same translation table as the questions.
       Ask them to confirm or correct the list, and wait. One short read for
       the user is cheaper than one rebuild for everyone.
+
+      THE LIST IS CHAT TEXT, NEVER TOOL INPUT. Write the whole list in the
+      message body. An interactive question tool may follow it carrying only
+      the short confirm question and its options — never the list itself: a
+      question dialog is transient, and once it is dismissed or answered the
+      list is gone from the conversation. Any message that asks about the
+      assumptions carries the full list again, including a re-ask after a
+      dismissed question or an unclear reply. Never refer to "the list" or
+      "these assumptions" without the list in the same message.
+
+        Fails:  question tool: "Here is everything I'm assuming: (1) ...
+                (2) ... Do these stand?"
+        Fails:  "The assumption list is waiting on you."
+        Passes: message body lists every ASSUMED line, then asks: "Do these
+                stand, or which would you change?"
       </phase_5_confirm_assumptions>
 
       <phase_6_write>
@@ -164,7 +179,8 @@ artifacts:
          3-5 unless the user stopped early.
       3. No option anywhere is marked, ordered, or worded as recommended.
       4. The assumption list was shown and confirmed before the file was
-         written.
+         written — shown as chat text, in full, in every message that asked
+         about it.
       5. Mechanical vocabulary check — these strings appear nowhere in any
          user-facing question, option, or assumption (this list is for
          verification only; generate from the translation table, not from
