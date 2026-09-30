@@ -2,7 +2,7 @@
 description: Update the docs for a finished feature
 ---
 
-Follow the instructions in @.claude/commands/opsx/archive.md exactly, with two amendments.
+Follow the instructions in @.claude/commands/opsx/archive.md exactly, with three amendments.
 
 **Amendment 1 — the archive rides in the change's pull request.** The archive commit is what keeps
 `main`'s specs and code landing together, so it goes on the branch the pull request is built from,
@@ -19,7 +19,22 @@ never on `main`:
 3. If a new branch was needed, open a small pull request from it to `main`, titled after the
    archive, with the GitHub tools when the session has them and `gh pr create` otherwise.
 
-**Amendment 2 — the ending.** Replace the success output's closing with exactly this, where
+**Amendment 2 — step 4 syncs without asking.** This command is reached only after the person has
+tested the built change, so the delta specs describe what shipped. Archiving without syncing would
+leave the main specs describing the app as it was, and the next `/DefineFeature` reads them as
+truth; the person running this cannot judge that choice. So step 4 asks NOTHING:
+
+- Changes needed: show the combined summary, then route as if "Sync now" were chosen — the specs
+  instructions lookup, the inline sync, and the re-comparison, stopping without archiving on any
+  mismatch.
+- Already synced: route as if "Archive now" were chosen.
+
+Stop to ask only when something is actually wrong. The confirmations for incomplete artifacts or
+tasks stand. If a main spec has changed since the proposal so that a delta no longer merges cleanly
+— a MODIFIED, REMOVED or RENAMED requirement it targets is gone — stop and explain the mismatch in
+plain words rather than guessing a merge.
+
+**Amendment 3 — the ending.** Replace the success output's closing with exactly this, where
 `<PR link>` is the pull request the archive commit rides in:
 
 "This change is finished and filed away. Merge its pull request on GitHub when you are ready:
