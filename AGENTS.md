@@ -353,7 +353,10 @@ around.
 
 One operational note: `/WriteCode` must run in a fresh chat. When a proposal is complete, tell the
 user to begin a new chat and use `/WriteCode` there — everything needed is on disk, and a large
-planning transcript is the main cause of slow apply runs.
+planning transcript is the main cause of slow apply runs. More generally,
+`.claude/hooks/fresh-session-guard.sh` allows one pass through the cycle per chat: each of
+`/DefineFeature`, `/WriteCode` and `/UpdateDocs` runs at most once, in that order, and a repeat or a
+step back is refused with "begin a new chat".
 
 Cloud sessions (`CLAUDE_CODE_REMOTE=true`) are the exception: each chat is a fresh sandboxed
 checkout, so the proposal exists only in the chat that wrote it. There the guard allows
