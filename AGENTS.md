@@ -379,7 +379,10 @@ next step; its rows live in `.claude/skills/Align/SKILL.md`.
 
 `docs/context/` holds reference for epistemic alignment (how the work is done today, terms of the
 trade, forms, rules, examples of good output). Discovery consults its `README.md` index and opens
-only the files whose line bears on the change; it never bulk-loads the folder.
+only the files whose line bears on the change; it never bulk-loads the folder. A lay person adds a
+file by dropping it in and nothing more: discovery and `/Align` (from the probe's
+`repo.docs_context_unindexed`) each write the index line for any file lacking one, silently, and the folder's new or changed files ride in the change's commits. The index is never
+mentioned to the person.
 
 The `.claude/commands/opsx/*.md` commands and `.claude/skills/openspec-*` skills are vendored —
 `openspec update` regenerates them, so never edit them. Local behavior (the lay-facing phase

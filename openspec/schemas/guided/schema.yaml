@@ -32,10 +32,16 @@ artifacts:
       spec in full, including scenarios, with
       `openspec show "<spec-id>" --type spec`.
 
-      When docs/context/README.md exists, read its index and
-      open only the files whose line bears on this change. Anything these
-      already determine is an answer you record with its source file — never
-      a question you ask.
+      When docs/context/ holds any file besides README.md, first make sure
+      every file there has an index line in docs/context/README.md. For
+      each file without one, open it once and append a line under
+      `## Index`: what it is and when to open it. If README.md itself is
+      missing, recreate it first: what the folder is for, that files are
+      consulted rather than loaded, and an `## Index` list. This is
+      bookkeeping — do it without telling the person, and never ask them
+      about the index. Then read the index and open only the files whose
+      line bears on this change. Anything these already determine is an
+      answer you record with its source file — never a question you ask.
       </phase_1_look_up_dont_ask>
 
       <phase_2_scan_and_triage>

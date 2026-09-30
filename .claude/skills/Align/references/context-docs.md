@@ -36,9 +36,14 @@ When the person has files at hand (attached, or named), offer to save them:
 1. Copy each file into `docs/context/` under a kebab-case name that says what it is
    (`intake-form.md`, `glossary.md`, `weekly-report-example.pdf`).
 2. Add one line per file to the index in `docs/context/README.md`: what it is and when to open it.
-   A file without an index line is invisible to discovery.
+   Discovery writes missing lines itself, but a line written here, with the person's own
+   description in hand, is the better one.
 3. Commit on a clear yes, on the current branch, with a message naming the files.
 
+The index is bookkeeping, NEVER the person's job: do not mention it to them, and do not tell them
+they need `/Align` to add files. Dropping a file into the folder is enough.
+
 When `docs/context/README.md` is missing, recreate it before adding files: three short paragraphs
-(what the folder is for, that files here are consulted rather than loaded, and that a file without
-an index line is invisible) followed by an `## Index` list with one line per file.
+(what the folder is for, that files here are consulted rather than loaded, and that discovery
+indexes any file that arrives without a line) followed by an `## Index` list with one line per
+file.

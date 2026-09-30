@@ -505,6 +505,13 @@ run_suite() {
   printf 'b\n' >"$r/docs/context/intake-form.md"
   probe "$r" ALIGN_PROBE_WIZARD=skip
   check_key "docs/context: two files" repo.docs_context 2
+  check_key "docs/context: two unindexed" repo.docs_context_unindexed 2
+  printf -- '- glossary.md: the terms of the trade.\n' >>"$r/docs/context/README.md"
+  probe "$r" ALIGN_PROBE_WIZARD=skip
+  check_key "docs/context: one unindexed" repo.docs_context_unindexed 1
+  rm "$r/docs/context/README.md"
+  probe "$r" ALIGN_PROBE_WIZARD=skip
+  check_key "docs/context: no README, all unindexed" repo.docs_context_unindexed 2
 
   # --- replaceme removed --------------------------------------------------------
   printf 'name = "acme";\n' >"$r/flake.nix"

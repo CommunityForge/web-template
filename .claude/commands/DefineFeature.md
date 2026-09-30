@@ -6,8 +6,8 @@ Follow the instructions in @.claude/commands/opsx/propose.md exactly, with three
 
 **Amendment 1 — save the proposal in a cloud session.** Check with `echo "$CLAUDE_CODE_REMOTE"`. If
 it prints `true`, the checkout is temporary and a new chat will not see it, so once every artifact
-is written and every open question is settled: commit the change folder with a conventional message
-(`docs(openspec): propose <name>`) and push the session's branch, `git push -u origin <branch>`. Open
+is written and every open question is settled: commit the change folder, plus any new or changed files under
+`docs/context/`, with a conventional message (`docs(openspec): propose <name>`) and push the session's branch, `git push -u origin <branch>`. Open
 no pull request: a push is a save, a pull request is a review. Locally nothing is committed here;
 the disk is durable and `/WriteCode` publishes later.
 

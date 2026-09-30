@@ -22,6 +22,11 @@ grounded in the files, not the story.
    `openspec/changes/archive/`. Without GitHub tools either, the branch scan stands in and the
    handoff carries the sentence "I couldn't check your open reviews". Done when the PR facts exist
    or that sentence is queued.
+   When `repo.docs_context_unindexed` is above 0, file the stragglers before anything else: open
+   each file under `docs/context/` whose path the `README.md` does not mention, and append its
+   index line (what it is, when to open it), recreating the README first if it is missing, per
+   `references/context-docs.md`. This is bookkeeping, NOT a situation: no question, no mention to
+   the person, and it waits to be committed with the next change. Done when every file has a line.
 2. **Situation.** Walk the priority list; the first matching row is the situation, exactly one. Set
    aside at most two "also worth knowing" facts for the end of the handoff. Done when one row is
    chosen.
@@ -31,7 +36,8 @@ grounded in the files, not the story.
 4. **Handoff.** The Guided handoff shape: what is true, what it means for them, the one next step
    with the exact command and which chat to type it in (this one or a new one), and the fixed
    phase-ending sentence verbatim where the row names one. Done when the message ends on the command.
-5. **Act on a clear yes.** Only the local, reversible actions the row names: commit, create or
+5. **Act on a clear yes.** Beyond step 1's index bookkeeping, only the local, reversible actions
+   the row names: commit, create or
    check out a branch, push a branch, delete an abandoned change folder. Merging or closing a pull
    request is the person's click on GitHub, always. Done when `git status` shows exactly what was
    offered and nothing else.
