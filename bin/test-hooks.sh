@@ -21,16 +21,20 @@ GUARD="${1:-.claude/hooks/boundary-guard.sh}"
 }
 FRESH="${2:-.claude/hooks/fresh-session-guard.sh}"
 
+REMINDER="${3:-.claude/hooks/artifact-reminder.sh}"
+
 # Lets check() route through an interpreter when the exec bit is missing.
 fresh_guard() { bash "$FRESH"; }
+artifact_reminder() { bash "$REMINDER"; }
 
 PASS=0
 FAIL=0
 
-# expect: "deny" or "allow". Deny is exit 0 plus a permissionDecision JSON
-# line (PreToolUse) or a decision:block line (UserPromptSubmit) on stdout;
-# allow is exit 0 and silence. Exit 2 is the retired legacy contract and
-# always fails, as does any stray output on an allow.
+# expect: "deny", "remind" or "allow". Deny is exit 0 plus a
+# permissionDecision JSON line (PreToolUse) or a decision:block line
+# (UserPromptSubmit) on stdout; remind is exit 0 plus a PostToolUse
+# additionalContext line; allow is exit 0 and silence. Exit 2 is the retired
+# legacy contract and always fails, as does any stray output on an allow.
 check() {
   local name="$1" expect="$2" payload="$3"
   local out rc got
@@ -42,6 +46,8 @@ check() {
     got="error"
   elif printf '%s' "$out" | grep -qE '"permissionDecision"[[:space:]]*:[[:space:]]*"deny"|"decision"[[:space:]]*:[[:space:]]*"block"'; then
     got="deny"
+  elif printf '%s' "$out" | grep -qE '"hookEventName":"PostToolUse","additionalContext"'; then
+    got="remind"
   elif [ -z "$out" ]; then
     got="allow"
   else
@@ -210,13 +216,73 @@ run_fresh_suite() {
   GUARD="$saved_guard"
 }
 
+run_reminder_suite() {
+  echo
+  echo "Artifact reminder tests ($1)"
+  echo "-----------------------"
+
+  if [ ! -x "$REMINDER" ]; then
+    printf '  \033[33mWARN\033[0m  %s lacks its exec bit — Claude Code will not run it (chmod +x). Testing via bash.\n' "$REMINDER"
+  fi
+
+  local saved_guard="$GUARD"
+  GUARD=artifact_reminder
+
+  # --- must REMIND ------------------------------------------------------------
+
+  check "proposal written whole" remind \
+    '{"hook_event_name":"PostToolUse","tool_name":"Write","tool_input":{"file_path":"openspec/changes/add-todo/proposal.md","content":"# Proposal"}}'
+
+  check "proposal edited in place (absolute path)" remind \
+    '{"hook_event_name":"PostToolUse","tool_name":"Edit","tool_input":{"file_path":"/repo/openspec/changes/add-todo/proposal.md","old_string":"a","new_string":"b"}}'
+
+  check "delta spec edited in place" remind \
+    '{"hook_event_name":"PostToolUse","tool_name":"Edit","tool_input":{"file_path":"openspec/changes/add-todo/specs/todo/spec.md","old_string":"a","new_string":"b"}}'
+
+  check "delta spec via MultiEdit" remind \
+    '{"hook_event_name":"PostToolUse","tool_name":"MultiEdit","tool_input":{"file_path":"openspec/changes/add-todo/specs/todo/spec.md","edits":[]}}'
+
+  # --- must stay SILENT -------------------------------------------------------
+
+  check "discovery notes are not sent" allow \
+    '{"hook_event_name":"PostToolUse","tool_name":"Edit","tool_input":{"file_path":"openspec/changes/add-todo/discovery.md","old_string":"a","new_string":"b"}}'
+
+  check "design is not sent" allow \
+    '{"hook_event_name":"PostToolUse","tool_name":"Write","tool_input":{"file_path":"openspec/changes/add-todo/design.md","content":"# Design"}}'
+
+  check "tasks are not sent" allow \
+    '{"hook_event_name":"PostToolUse","tool_name":"Edit","tool_input":{"file_path":"openspec/changes/add-todo/tasks.md","old_string":"- [ ]","new_string":"- [x]"}}'
+
+  check "archived proposal is not sent" allow \
+    '{"hook_event_name":"PostToolUse","tool_name":"Edit","tool_input":{"file_path":"openspec/changes/archive/2026-09-01-add-todo/proposal.md","old_string":"a","new_string":"b"}}'
+
+  check "archived delta spec is not sent" allow \
+    '{"hook_event_name":"PostToolUse","tool_name":"Edit","tool_input":{"file_path":"openspec/changes/archive/2026-09-01-add-todo/specs/todo/spec.md","old_string":"a","new_string":"b"}}'
+
+  check "living spec is not sent" allow \
+    '{"hook_event_name":"PostToolUse","tool_name":"Edit","tool_input":{"file_path":"openspec/specs/todo/spec.md","old_string":"a","new_string":"b"}}'
+
+  check "unrelated source file" allow \
+    '{"hook_event_name":"PostToolUse","tool_name":"Write","tool_input":{"file_path":"apps/frontend/src/proposal.md","content":"x"}}'
+
+  check "non-writing tool" allow \
+    '{"hook_event_name":"PostToolUse","tool_name":"Read","tool_input":{"file_path":"openspec/changes/add-todo/proposal.md"}}'
+
+  check "unparsable payload stays silent" allow \
+    'not json at all'
+
+  GUARD="$saved_guard"
+}
+
 run_suite "host PATH"
 run_fresh_suite "host PATH"
+run_reminder_suite "host PATH"
 
 if [ -d "$PWD/.devshell/bin" ]; then
   export CLAUDE_PROJECT_DIR="$PWD"
   run_suite "pinned toolchain via .devshell"
   run_fresh_suite "pinned toolchain via .devshell"
+  run_reminder_suite "pinned toolchain via .devshell"
 else
   echo
   echo "  (no .devshell out-link; pinned-toolchain pass skipped)"

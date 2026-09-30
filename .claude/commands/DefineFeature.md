@@ -2,7 +2,7 @@
 description: Define a feature
 ---
 
-Follow the instructions in @.claude/commands/opsx/propose.md exactly, with two amendments.
+Follow the instructions in @.claude/commands/opsx/propose.md exactly, with three amendments.
 
 **Amendment 1 — save the proposal in a cloud session.** Check with `echo "$CLAUDE_CODE_REMOTE"`. If
 it prints `true`, the checkout is temporary and a new chat will not see it, so once every artifact
@@ -35,5 +35,13 @@ sentence and nothing after it:
 
 "When you are satisfied with the specification, use `/WriteCode` in this chat to realize the
 changes."
+
+**Amendment 3 — show the documents, not the diff.** The person cannot read a diff, and revising a
+file in place shows them nothing else. So every turn that creates or changes `proposal.md` or any
+`specs/*/spec.md` in the change ends, before its closing message, by sending each of those files
+changed that turn with `SendUserFile` (`display: "render"`, `status: "normal"`). The first draft
+sends all of them; a revision sends only the ones it touched. Never send `discovery.md`,
+`design.md` or `tasks.md`: they are not written for the person. If `SendUserFile` is unavailable,
+name each changed document in plain words instead of pointing at the diff.
 
 ARGUMENTS: $ARGUMENTS
