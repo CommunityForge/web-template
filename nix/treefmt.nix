@@ -26,5 +26,8 @@
     "*.tsbuildinfo"
     # Vendored third-party agent skill bundles -- not ours to reformat.
     ".agents/**"
+    # Don't adjust vendored OpenSpec skills
+    ".claude/commands/opsx/**"
+    ".claude/skills/openspec-*/**"
   ];
 }
