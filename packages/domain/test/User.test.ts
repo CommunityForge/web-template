@@ -10,6 +10,13 @@ const decodeUserId = Schema.decodeUnknownEffect(User.UserId)
 
 const uuid = "8d2b1a6e-5f0c-4c3a-9d7e-2b1f0a9c8d7e"
 
+const user = (email: Option.Option<string>) =>
+  User.User.make({
+    id: Schema.decodeSync(User.UserId)(uuid),
+    email,
+    createdAt: DateTime.makeUnsafe(0),
+  })
+
 describe("User", () => {
   describe("UserId", () => {
     it.effect("decodes a UUID", () =>
@@ -28,13 +35,6 @@ describe("User", () => {
   })
 
   describe("isAnonymous / isMember", () => {
-    const user = (email: Option.Option<string>) =>
-      User.User.make({
-        id: Schema.decodeSync(User.UserId)(uuid),
-        email,
-        createdAt: DateTime.makeUnsafe(0),
-      })
-
     it("a user with no address is anonymous", () => {
       const guest = user(Option.none())
       strictEqual(User.isAnonymous(guest), true)
