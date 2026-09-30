@@ -1,16 +1,6 @@
 name: guided
 version: 2
 description: Spec-driven workflow with a product-language discovery gate - discovery → proposal → specs → design → tasks
-# v2 changes (research-motivated):
-# - Precedence block resolves the conflict with caller-level "keep momentum" guidance
-#   (instruction conflicts are the dominant driver of compliance collapse).
-# - Elicitation converted from soft guidance into countable gates (models rarely ask by default).
-# - Premise challenge and lifecycle walk added (pushback + feature completeness).
-# - "Recommended" option removed; options must be structurally parallel; only factual tags allowed
-#   (domain experts decide; the model informs).
-# - Positive steering + contrastive fail/pass examples replace reliance on the banned-word list;
-#   the word list is demoted to a final mechanical verification step.
-# - Critical rules positioned first and last in each instruction (lost-in-the-middle).
 artifacts:
   - id: discovery
     generates: discovery.md
@@ -36,8 +26,7 @@ artifacts:
       </phase_1_look_up_dont_ask>
 
       <phase_2_scan_and_triage>
-      Internal reasoning, never shown to the user. Mark each category
-      Clear / Partial / Missing:
+      Mark each category Clear / Partial / Missing:
         functional scope, domain model, persistence, interaction, data
         operations, access, non-functional, integration, migration, failure
         handling, success criteria
@@ -212,29 +201,24 @@ artifacts:
         lifecycle stage or capability discovery.md raised that this change
         will not address belongs here, stated plainly, so scope is a decision
         a reviewer can see rather than an omission they discover later.
-      - **Capabilities**: Identify which specs will be created or modified:
-        - **New Capabilities**: List capabilities being introduced. Each
-          becomes a new `specs/<name>/spec.md`. Use kebab-case names (e.g.,
-          `user-auth`, `data-export`).
-        - **Modified Capabilities**: List existing capabilities whose
-          REQUIREMENTS are changing. Only include if spec-level behavior
-          changes (not just implementation details). Each needs a delta spec
-          file. Check `openspec/specs/` for existing spec names. Leave empty
-          if no requirement changes.
+      - **Capabilities**: Research existing specs before filling this in. This
+        list is the contract with the specs phase: each capability listed
+        here needs a corresponding spec file.
+        - **New Capabilities**: Each becomes a new `specs/<name>/spec.md`.
+          Use kebab-case names (e.g., `user-auth`, `data-export`).
+        - **Modified Capabilities**: Existing capabilities whose REQUIREMENTS
+          change; each needs a delta spec file. Only include if spec-level
+          behavior changes (not just implementation details). Check
+          `openspec/specs/` for existing spec names. Leave empty if no
+          requirement changes.
       - **Impact**: Affected code, APIs, dependencies, or systems.
 
-      IMPORTANT: The Capabilities section is critical. It creates the contract
-      between proposal and specs phases. Research existing specs before
-      filling this in. Each capability listed here will need a corresponding
-      spec file.
-
-      Every change must either declare at least one capability (new or
-      modified) or explicitly opt out of specs: `openspec validate` rejects a
-      change with zero deltas unless the change's `.openspec.yaml` sets
-      `skip_specs: true`. Use `skip_specs: true` only when no spec-level
-      behavior changes (pure refactor, tooling, docs) - specs describe
-      behavior, so if behavior does not change, no spec should change either.
-      Do not invent a requirement just to satisfy validation.
+      Every change either declares at least one capability or sets
+      `skip_specs: true` in the change's `.openspec.yaml`: `openspec validate`
+      rejects a change with zero deltas otherwise. Use `skip_specs: true` only
+      when no spec-level behavior changes (pure refactor, tooling, docs) -
+      specs describe behavior, so if behavior does not change, no spec should
+      change either. Do not invent a requirement just to satisfy validation.
 
       CARRY DISCOVERY FORWARD. Every answer in discovery.md appears here as
       either a stated goal or an explicit non-goal. Carry ASSUMED items
@@ -245,9 +229,8 @@ artifacts:
       implementation details belong in design.md.
 
       Do not embed executor directives (for example a "REQUIRED SUB-SKILL"
-      line) in any artifact. Artifacts describe the work, not who runs it.
+      line) in any artifact.
 
-      This is the foundation - specs, design, and tasks all build on this.
     requires:
       - discovery
 
@@ -261,8 +244,8 @@ artifacts:
       A spec is a behavior contract, not an implementation plan. The two
       tests that govern everything below: (1) if the implementation can
       change without changing externally visible behavior, it does not
-      belong in the spec; (2) if a reviewer could not look at the product
-      and say "no, it doesn't do that", the scenario is not written yet.
+      belong in the spec; (2) if a scenario is not falsifiable, it is not
+      written yet.
 
       Good spec content:
       - Observable behavior users or downstream systems rely on
@@ -291,13 +274,11 @@ artifacts:
         Passes: - **THEN** the list stays on screen unchanged and a
                   message offers Retry
 
-      COMPLETENESS PER REQUIREMENT. For each requirement, account for each
+      EDGE CASES PER REQUIREMENT. For each requirement, account for each
       of these cases where it applies: the empty/first-use case, the
       failure case, the permission-denied case (if access-controlled), and
       limits or undo (if it changes data). Each one is either a scenario or
       one explicit line: "Out of scope: <case> — <one-line reason>".
-      Silence is not an option — an unaccounted case that someone hits in
-      production was a spec gap, not an implementation bug.
 
       CROSS-CHECK against discovery.md. Every answer the user gave must
       appear here as a requirement or an explicit non-goal. If one does
@@ -377,6 +358,7 @@ artifacts:
       test above; every requirement's empty, failure, permission, and
       limit/undo cases are either scenarios or explicit out-of-scope lines;
       every discovery.md answer is a requirement or a non-goal.
+
     requires:
       - proposal
 
@@ -387,10 +369,9 @@ artifacts:
     instruction: |
       Create the design document that explains HOW to implement the change.
 
-      This artifact is for whoever implements the change. It is the one place
-      engineering vocabulary belongs, and the user is not expected to review
-      it. Everything discovery.md triaged as DESIGN is resolved here, by you -
-      do not take those back to the user.
+      This artifact is engineering-facing: the one place engineering
+      vocabulary belongs. Everything discovery.md triaged as DESIGN is
+      resolved here, by you - do not take those back to the user.
 
       When to include design.md (create only if any apply):
       - Cross-cutting change (multiple services/modules) or new architectural pattern
@@ -404,26 +385,23 @@ artifacts:
       - **Decisions**: Key technical choices with rationale (why X over Y?). Present 2-3 approaches with trade-offs before recommending one, and say in one line why each rejected option was rejected. (Recommending is correct here: these are engineering decisions the user delegated. Product-visible decisions were the user's and were made in discovery - do not reopen or override them.)
       - **Risks / Trade-offs**: Known limitations, things that could go wrong. Format: [Risk] → Mitigation. Call out anything that could break existing behavior.
       - **Migration Plan**: Steps to deploy, rollback strategy (if applicable)
-      - **Open Questions**: Unknowns that can safely be answered later without
-        changing the specs, the approach, or the task breakdown. Omit if none.
+      - **Open Questions**: Unknowns that are not load-bearing. Omit if none.
 
       List every existing file or module this change touches, and say whether
       it is read, modified, or replaced. Follow the conventions discovery.md
       recorded rather than re-deciding them.
 
-      Open questions are for genuinely deferrable unknowns, not decisions you
-      skipped. If a question would change the specs, the chosen approach, or
-      the task breakdown, resolve it now. If resolving it needs the user, ask
-      in the plain product language discovery.md used - one question per
-      message, neutral parallel options, no recommended option - never in the
-      vocabulary of this document.
+      A load-bearing question - one that would change the specs, the chosen
+      approach, or the task breakdown - is resolved now. If resolving it
+      needs the user, ask in the plain product language discovery.md used -
+      one question per message, neutral parallel options, no recommended
+      option - never in the vocabulary of this document.
 
       Focus on architecture and approach, not line-by-line implementation.
-      The proposal covers why and what; design covers how. Reference the
-      proposal for motivation and, once written, the specs for requirements -
-      if a section would only restate them, point to them instead.
+      Reference the proposal for motivation and, once written, the specs for
+      requirements - if a section would only restate them, point to them
+      instead.
 
-      Good design docs explain the "why" behind technical decisions.
     requires:
       - proposal
 
@@ -434,13 +412,13 @@ artifacts:
     instruction: |
       Create the task list that breaks down the implementation work.
 
-      Like design.md, this is for whoever implements the change. The user is
-      not expected to review it.
+      Like design.md, this is engineering-facing.
 
       Before writing tasks, check design.md for Open Questions. If any of them
-      would change what gets built, resolve them with the user first - in the
-      same plain product language and neutral option format discovery used -
-      do not bake an unstated assumption into the task list.
+      is load-bearing, resolve it with the user first - in the same plain
+      product language and neutral parallel options, with no recommended
+      option, that discovery used - do not bake an unstated assumption into
+      the task list.
 
       **IMPORTANT: Follow the template below exactly.** The apply phase parses
       checkbox format to track progress. Tasks not using `- [ ]` won't be tracked.
@@ -467,15 +445,14 @@ artifacts:
       ```
 
       Do NOT embed instructions about which skill or sub-agent should execute
-      these tasks. The apply phase executes them. Artifacts describe the work,
-      not who runs it.
+      these tasks.
 
-      Before finishing: re-read the spec scenarios, including the empty,
-      failure, permission, and limit/undo scenarios. If any scenario has no
-      task that would satisfy it, add the missing task.
+      Before finishing: re-read the spec scenarios, edge cases included. If
+      any scenario has no task that would satisfy it, add the missing task.
 
       Reference specs for what needs to be built, design for how to build it.
       Each task should be verifiable - you know when it's done.
+
     requires:
       - specs
       - design
