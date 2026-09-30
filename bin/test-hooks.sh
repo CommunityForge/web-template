@@ -12,7 +12,7 @@
 
 set -uo pipefail
 export LC_ALL=C
-unset CLAUDE_PROJECT_DIR
+unset CLAUDE_PROJECT_DIR CLAUDE_CODE_REMOTE
 
 GUARD="${1:-.claude/hooks/boundary-guard.sh}"
 [ -x "$GUARD" ] || {
@@ -25,6 +25,7 @@ REMINDER="${3:-.claude/hooks/artifact-reminder.sh}"
 
 # Lets check() route through an interpreter when the exec bit is missing.
 fresh_guard() { bash "$FRESH"; }
+remote_fresh_guard() { CLAUDE_CODE_REMOTE=true bash "$FRESH"; }
 artifact_reminder() { bash "$REMINDER"; }
 
 PASS=0
@@ -141,6 +142,21 @@ run_suite() {
   fi
 }
 
+# says: the guard's block reason contains $3 and none of the model-facing
+# framing ("BLOCKED", "Tell the person").
+says() {
+  local name="$1" payload="$2" want="$3" out
+  out="$(printf '%s' "$payload" | "$GUARD" 2>/dev/null)"
+  if printf '%s' "$out" | grep -qF "$want" &&
+    ! printf '%s' "$out" | grep -qE 'BLOCKED|Tell the person'; then
+    printf '  \033[32mPASS\033[0m  %s\n' "$name"
+    PASS=$((PASS + 1))
+  else
+    printf '  \033[31mFAIL\033[0m  %s (got: %s)\n' "$name" "$out"
+    FAIL=$((FAIL + 1))
+  fi
+}
+
 run_fresh_suite() {
   echo
   echo "Fresh-session guard tests ($1)"
@@ -158,13 +174,28 @@ run_fresh_suite() {
   local tdir
   tdir="$(mktemp -d 2>/dev/null)" || tdir="$(mktemp -d .fresh-guard-test.XXXXXX)"
 
-  # Transcripts where a proposal ran, one per way propose can appear.
+  # One transcript per way each stage can appear.
   printf '%s\n' \
     '{"type":"user","content":"<command-name>/DefineFeature</command-name><command-args>add-todo</command-args>"}' \
     >"$tdir/proposed-typed.jsonl"
   printf '%s\n' \
     '{"type":"assistant","content":[{"type":"tool_use","name":"Skill","input":{"skill":"opsx:propose"}}]}' \
     >"$tdir/proposed-skill.jsonl"
+  printf '%s\n' \
+    '{"type":"user","content":"<command-name>/WriteCode</command-name><command-args>add-todo</command-args>"}' \
+    >"$tdir/wrote-typed.jsonl"
+  printf '%s\n' \
+    '{"type":"assistant","content":[{"type":"tool_use","name":"Skill","input":{"skill":"opsx:apply"}}]}' \
+    >"$tdir/wrote-skill.jsonl"
+  printf '%s\n' \
+    '{"type":"user","content":"<command-name>/UpdateDocs</command-name><command-args>add-todo</command-args>"}' \
+    >"$tdir/docs-typed.jsonl"
+
+  # The call being checked is already in the transcript as its own tool_use
+  # line; it must not count against itself.
+  printf '%s\n' \
+    '{"type":"assistant","content":[{"type":"tool_use","id":"toolu_self","name":"Skill","input":{"skill":"WriteCode"}}]}' \
+    >"$tdir/self-only.jsonl"
 
   # A clean transcript that MENTIONS /DefineFeature in prose (the session-context
   # rule text does, every session) — evidence must mean invocation, not mention.
@@ -178,39 +209,101 @@ run_fresh_suite() {
     "{\"hook_event_name\":\"UserPromptSubmit\",\"transcript_path\":\"$tdir/proposed-typed.jsonl\",\"prompt\":\"/WriteCode add-todo\"}"
 
   check "WriteCode skill after typed /DefineFeature" deny \
-    "{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Skill\",\"transcript_path\":\"$tdir/proposed-typed.jsonl\",\"tool_input\":{\"skill\":\"WriteCode\"}}"
+    "{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Skill\",\"tool_use_id\":\"toolu_new\",\"transcript_path\":\"$tdir/proposed-typed.jsonl\",\"tool_input\":{\"skill\":\"WriteCode\"}}"
 
   check "opsx:apply skill after propose skill" deny \
-    "{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Skill\",\"transcript_path\":\"$tdir/proposed-skill.jsonl\",\"tool_input\":{\"skill\":\"opsx:apply\"}}"
+    "{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Skill\",\"tool_use_id\":\"toolu_new\",\"transcript_path\":\"$tdir/proposed-skill.jsonl\",\"tool_input\":{\"skill\":\"opsx:apply\"}}"
 
   check "openspec-apply-change skill after propose skill" deny \
-    "{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Skill\",\"transcript_path\":\"$tdir/proposed-skill.jsonl\",\"tool_input\":{\"skill\":\"openspec-apply-change\"}}"
+    "{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Skill\",\"tool_use_id\":\"toolu_new\",\"transcript_path\":\"$tdir/proposed-skill.jsonl\",\"tool_input\":{\"skill\":\"openspec-apply-change\"}}"
 
   check "/WriteCode via SlashCommand after DefineFeature" deny \
-    "{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"SlashCommand\",\"transcript_path\":\"$tdir/proposed-typed.jsonl\",\"tool_input\":{\"command\":\"/WriteCode add-todo\"}}"
+    "{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"SlashCommand\",\"tool_use_id\":\"toolu_new\",\"transcript_path\":\"$tdir/proposed-typed.jsonl\",\"tool_input\":{\"command\":\"/WriteCode add-todo\"}}"
+
+  check "typed /DefineFeature after typed /DefineFeature" deny \
+    "{\"hook_event_name\":\"UserPromptSubmit\",\"transcript_path\":\"$tdir/proposed-typed.jsonl\",\"prompt\":\"/DefineFeature another-thing\"}"
+
+  check "DefineFeature again in the DefineFeature chat" deny \
+    "{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Skill\",\"tool_use_id\":\"toolu_new\",\"transcript_path\":\"$tdir/proposed-typed.jsonl\",\"tool_input\":{\"skill\":\"DefineFeature\"}}"
+
+  check "typed /DefineFeature after /WriteCode" deny \
+    "{\"hook_event_name\":\"UserPromptSubmit\",\"transcript_path\":\"$tdir/wrote-typed.jsonl\",\"prompt\":\"/DefineFeature\"}"
+
+  check "typed /WriteCode twice" deny \
+    "{\"hook_event_name\":\"UserPromptSubmit\",\"transcript_path\":\"$tdir/wrote-typed.jsonl\",\"prompt\":\"/WriteCode\"}"
+
+  check "typed /UpdateDocs twice" deny \
+    "{\"hook_event_name\":\"UserPromptSubmit\",\"transcript_path\":\"$tdir/docs-typed.jsonl\",\"prompt\":\"/UpdateDocs\"}"
+
+  check "typed /WriteCode after /UpdateDocs" deny \
+    "{\"hook_event_name\":\"UserPromptSubmit\",\"transcript_path\":\"$tdir/docs-typed.jsonl\",\"prompt\":\"/WriteCode\"}"
+
+  check "DefineFeature skill after opsx:apply skill" deny \
+    "{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Skill\",\"tool_use_id\":\"toolu_new\",\"transcript_path\":\"$tdir/wrote-skill.jsonl\",\"tool_input\":{\"skill\":\"DefineFeature\"}}"
+
+  check "openspec-propose skill after /WriteCode" deny \
+    "{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Skill\",\"tool_use_id\":\"toolu_new\",\"transcript_path\":\"$tdir/wrote-typed.jsonl\",\"tool_input\":{\"skill\":\"openspec-propose\"}}"
+
+  GUARD=remote_fresh_guard
+
+  check "cloud: typed /DefineFeature twice" deny \
+    "{\"hook_event_name\":\"UserPromptSubmit\",\"transcript_path\":\"$tdir/proposed-typed.jsonl\",\"prompt\":\"/DefineFeature\"}"
+
+  check "cloud: typed /WriteCode after /UpdateDocs" deny \
+    "{\"hook_event_name\":\"UserPromptSubmit\",\"transcript_path\":\"$tdir/docs-typed.jsonl\",\"prompt\":\"/WriteCode\"}"
 
   # --- must ALLOW -------------------------------------------------------------
 
+  check "cloud: typed /WriteCode after /DefineFeature" allow \
+    "{\"hook_event_name\":\"UserPromptSubmit\",\"transcript_path\":\"$tdir/proposed-typed.jsonl\",\"prompt\":\"/WriteCode add-todo\"}"
+
+  check "cloud: WriteCode skill after /DefineFeature" allow \
+    "{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Skill\",\"tool_use_id\":\"toolu_new\",\"transcript_path\":\"$tdir/proposed-typed.jsonl\",\"tool_input\":{\"skill\":\"WriteCode\"}}"
+
+  GUARD=fresh_guard
+
   check "WriteCode in a chat that never proposed" allow \
-    "{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Skill\",\"transcript_path\":\"$tdir/clean.jsonl\",\"tool_input\":{\"skill\":\"WriteCode\"}}"
+    "{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Skill\",\"tool_use_id\":\"toolu_new\",\"transcript_path\":\"$tdir/clean.jsonl\",\"tool_input\":{\"skill\":\"WriteCode\"}}"
 
   check "typed /WriteCode in a clean chat" allow \
     "{\"hook_event_name\":\"UserPromptSubmit\",\"transcript_path\":\"$tdir/clean.jsonl\",\"prompt\":\"/WriteCode\"}"
 
-  check "DefineFeature again in the DefineFeature chat" allow \
-    "{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Skill\",\"transcript_path\":\"$tdir/proposed-typed.jsonl\",\"tool_input\":{\"skill\":\"DefineFeature\"}}"
+  check "typed /UpdateDocs after /WriteCode" allow \
+    "{\"hook_event_name\":\"UserPromptSubmit\",\"transcript_path\":\"$tdir/wrote-typed.jsonl\",\"prompt\":\"/UpdateDocs add-todo\"}"
 
   check "UpdateDocs after DefineFeature" allow \
-    "{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Skill\",\"transcript_path\":\"$tdir/proposed-typed.jsonl\",\"tool_input\":{\"skill\":\"UpdateDocs\"}}"
+    "{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Skill\",\"tool_use_id\":\"toolu_new\",\"transcript_path\":\"$tdir/proposed-typed.jsonl\",\"tool_input\":{\"skill\":\"UpdateDocs\"}}"
+
+  check "openspec-propose skill inside a /DefineFeature chat" allow \
+    "{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Skill\",\"tool_use_id\":\"toolu_new\",\"transcript_path\":\"$tdir/proposed-typed.jsonl\",\"tool_input\":{\"skill\":\"openspec-propose\"}}"
+
+  check "WriteCode skill whose own tool_use is the only evidence" allow \
+    "{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Skill\",\"tool_use_id\":\"toolu_self\",\"transcript_path\":\"$tdir/self-only.jsonl\",\"tool_input\":{\"skill\":\"WriteCode\"}}"
 
   check "prose mentioning /WriteCode is not a command" allow \
     "{\"hook_event_name\":\"UserPromptSubmit\",\"transcript_path\":\"$tdir/proposed-typed.jsonl\",\"prompt\":\"what does /WriteCode do?\"}"
 
   check "missing transcript fails open" allow \
-    '{"hook_event_name":"PreToolUse","tool_name":"Skill","transcript_path":"/nonexistent/t.jsonl","tool_input":{"skill":"WriteCode"}}'
+    '{"hook_event_name":"PreToolUse","tool_name":"Skill","tool_use_id":"toolu_new","transcript_path":"/nonexistent/t.jsonl","tool_input":{"skill":"WriteCode"}}'
 
   check "unparsable payload fails open" allow \
     'not json at all'
+
+  # --- what the PERSON reads --------------------------------------------------
+  # A UserPromptSubmit reason is shown verbatim, so it must name the step the
+  # chat already ran and the command to type, with no model-facing framing.
+
+  says "repeat names the step and the command" \
+    "{\"hook_event_name\":\"UserPromptSubmit\",\"transcript_path\":\"$tdir/proposed-typed.jsonl\",\"prompt\":\"/DefineFeature\"}" \
+    'This chat has already been used for /DefineFeature. Start a new chat and type /DefineFeature there.'
+
+  says "step back names the later step" \
+    "{\"hook_event_name\":\"UserPromptSubmit\",\"transcript_path\":\"$tdir/wrote-typed.jsonl\",\"prompt\":\"/DefineFeature\"}" \
+    'This chat has already been used for /WriteCode. Start a new chat and type /DefineFeature there.'
+
+  says "write after define names the define step" \
+    "{\"hook_event_name\":\"UserPromptSubmit\",\"transcript_path\":\"$tdir/proposed-skill.jsonl\",\"prompt\":\"/WriteCode add-todo\"}" \
+    'This chat has already been used for /DefineFeature. Start a new chat and type /WriteCode there.'
 
   rm -rf "$tdir"
   GUARD="$saved_guard"
