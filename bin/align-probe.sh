@@ -154,8 +154,15 @@ emit repo.github "$REPO"
 emit repo.replaceme "$(yes_no grep -qs replaceme package.json flake.nix)"
 if [ -d docs/context ]; then
   emit repo.docs_context "$(find docs/context -type f ! -name README.md ! -name '.*' 2>/dev/null | wc -l | tr -d ' ')"
+  # A file is indexed when its path under docs/context/ appears anywhere in
+  # the README; with no README, every file counts as unindexed.
+  emit repo.docs_context_unindexed "$(find docs/context -type f ! -name README.md ! -name '.*' 2>/dev/null |
+    while IFS= read -r f; do
+      grep -qsF -- "${f#docs/context/}" docs/context/README.md || printf '%s\n' "$f"
+    done | wc -l | tr -d ' ')"
 else
   emit repo.docs_context missing
+  emit repo.docs_context_unindexed 0
 fi
 
 # --- git ----------------------------------------------------------------------

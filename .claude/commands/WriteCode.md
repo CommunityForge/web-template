@@ -12,7 +12,9 @@ do this before writing the completion output:
 1. Never commit to or push `main`. If the current branch is `main`, create a branch named after
    the change (`<change-name>`) and stay on it. In a cloud session the branch already exists;
    keep it.
-2. Commit everything the change touched with a conventional message, and push the branch:
+2. Commit everything the change touched, including any new or changed files under
+   `docs/context/` (reference the person dropped in, and the index lines discovery wrote for
+   them), with a conventional message, and push the branch:
    `git push -u origin <branch>`. The push runs the repo's pre-push gate (formatting, spelling,
    workflow lint); a gate failure is part of the change and is fixed before pushing again.
 3. Open a pull request from the branch to `main`, titled after the change, with the GitHub tools

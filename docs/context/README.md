@@ -6,7 +6,8 @@ must hold, and examples of output done right. Plans and designs for a change liv
 `openspec/changes/`; what the app already does lives in `openspec/specs/`. Nothing here is either.
 
 Files here are **consulted, never loaded**. Discovery reads the index below and opens only the files
-whose line bears on the change being defined. A file without an index line is invisible to it.
+whose line bears on the change being defined. A file dropped in without an index line gets one
+written the first time discovery runs, so the person adding files never maintains this list.
 
 ## Index
 
