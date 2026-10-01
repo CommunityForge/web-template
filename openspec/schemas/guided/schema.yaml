@@ -47,8 +47,8 @@ artifacts:
       <phase_2_scan_and_triage>
       Mark each category Clear / Partial / Missing:
         functional scope, domain model, persistence, interaction, data
-        operations, access, non-functional, integration, migration, failure
-        handling, success criteria
+        operations, ownership, non-functional, integration, migration,
+        failure handling, success criteria
 
       Triage every Partial or Missing gap into exactly one bucket:
         CONVENTION - the codebase already decides it (AGENTS.md, an existing
@@ -65,7 +65,7 @@ artifacts:
       </phase_2_scan_and_triage>
 
       <phase_3_challenge_before_refining>
-      Before refining the request, question it. All three checks are
+      Before refining the request, question it. All four checks are
       mandatory:
 
       1. SCOPE. If the request spans multiple independent subsystems, stop
@@ -75,7 +75,7 @@ artifacts:
       2. PREMISE. State, in one plain sentence, the strongest reason this
          change might be unnecessary, wrongly sized, or already served by an
          existing capability — then ask the user to confirm the goal behind
-         the request. This counts as one of your Phase 4 questions. If after
+         the request. It is the first question you send. If after
          honest effort no such reason exists, record "premise check: no
          objection found" in discovery.md and move on. Do not manufacture an
          objection, and do not skip the check.
@@ -87,15 +87,73 @@ artifacts:
          is a gap — triage it in Phase 2's buckets like any other. A request
          is almost never complete as written; the stages it skips are where
          production surprises live.
+
+      4. OWNERSHIP WALK. List every kind of thing this change stores, shows,
+         or sends: a note, a photo, a reply, an address, a total computed
+         from other people's records. For each, settle five answers:
+           owner    - whose it is: the person who made it, a group, or the
+                      product itself
+           place    - where it travels beyond the product: nowhere, or an
+                      outside service (email, payments, analytics, an AI
+                      model)
+           audience - who can see it: only the owner, people the owner
+                      picks, a group, every signed-in person, anyone with
+                      the link, anyone at all
+           control  - who can change or delete it, and what happens to
+                      other people's replies or copies when they do
+           exit     - what happens to it when the owner deletes their
+                      account, leaves a group, or is removed from one
+         Mark a thing sensitive when a person would mind a stranger seeing
+         it: contact details, location, money, health, private messages,
+         anything about someone who is not the user.
+
+         The codebase decides how a rule is enforced, never what the rule
+         is. An answer is CONVENTION only when a context file or an existing
+         spec states it for this kind of thing; a recipe for enforcing
+         ownership in code is not that statement. Every other unsettled
+         answer is a PRODUCT gap, and always INSIDE: it is this feature's
+         own data. Its safe side is the narrowest setting: owned by the
+         person who made it, travels nowhere, only they see or change it,
+         gone with their account. The narrowest setting is a two-way door —
+         nobody else ever saw the thing, so widening it later exposes
+         nothing and its removal costs nobody else anything. Any wider
+         answer, including one the request implies by naming sharing, a
+         team, a profile, or other people, is a one-way door.
       </phase_3_challenge_before_refining>
 
       <phase_4_ask>
-      Rank the PRODUCT gaps by (impact x uncertainty) and ask the top 3-5.
-      One question per message, never batched. If an interactive question
-      tool is available, use it: one question per call, at most 4 options,
-      each label 5 words or fewer, always allow an open-ended answer. Stop
-      early if the user says "done", "good", or "no more". Never show the
-      user the coverage scan, the triage, or the question queue.
+      Sort every PRODUCT gap with two yes/no calls:
+        INSIDE — does it belong to the feature as the request, the premise
+          answer, and the scope check bound it? Leaving a thing out is
+          usually reversible, so a gap outside the feature is never asked:
+          it becomes an out-of-scope line the user sees in Phase 5. A gap
+          stays INSIDE when leaving it out makes the feature unsafe or a
+          dead end, such as stored personal details with no way to remove
+          them.
+        ONE-WAY DOOR — would a wrong guess be costly to reverse once people
+          use the feature? Data exposed, deleted, or sent outside the
+          product; money; the shape of what people save (one or many, what
+          it belongs to); behavior other people come to rely on; what
+          happens to the people and data already here. Everything else is
+          a two-way door.
+
+      Ask every INSIDE one-way door, and only those. Each INSIDE two-way
+      door is decided by you and goes to Phase 5 as ASSUMED. The user
+      widens the feature, never you: when an answer brings a new gap
+      inside, sort it with the same two calls. Asking is done when every
+      INSIDE one-way door holds the user's answer. Ask first the doors whose answers others depend on, so a later
+      question builds on an earlier answer rather than guessing it.
+
+      If the user says "done", "good", or "no more" before then, decide
+      each unasked one-way door at its safe side — the answer that exposes
+      least and is easiest to reverse — and carry it to Phase 5 as ASSUMED,
+      at the top of the list, saying it was never asked.
+
+      One question per message, never batched: each question is written
+      knowing every earlier answer. If an interactive question tool is
+      available, use it: one question per call, at most 4 options, each
+      label 5 words or fewer, always allow an open-ended answer. Never show
+      the user the coverage scan, the triage, or the question queue.
 
       HOW TO PHRASE. Every question and every option describes something a
       person using the product would notice. The scan category is your
@@ -108,7 +166,9 @@ artifacts:
                             what they see while waiting, or when it breaks
         data operations  -> can they change their mind, undo, find one
                             among hundreds
-        access           -> who else can see or do this
+        ownership        -> whose it is; who else can see, change, or
+                            delete it; where it goes outside the product;
+                            what happens to it when they leave
         non-functional   -> how many, how slow before it feels broken, does
                             it work offline, keyboard and screen reader
         integration      -> what else in the product visibly changes
@@ -130,6 +190,10 @@ artifacts:
         Passes: "While a save is finishing, can they keep editing, or does
                  the screen wait?"
 
+        Fails:  "Should the notes table's policy scope reads to user_id?"
+        Passes: "Can anyone besides the person who wrote a note ever read
+                 it - a teammate, an admin, someone they send a link to?"
+
       OPTIONS ARE NEUTRAL. Deciding is the user's job; your job is making
       the costs visible. Write every option in the same parallel shape —
       the outcome, then what it costs — with no option written more
@@ -150,7 +214,10 @@ artifacts:
       Before writing discovery.md, send the user the full list of those
       decisions, each as one plain sentence they could veto, each marked
       ASSUMED, phrased with the same translation table as the questions.
-      Ask them to confirm or correct the list, and wait. One short read for
+      Follow it with every out-of-scope line from Phase 4, each one plain
+      sentence naming what this change leaves out. Ask them to confirm or
+      correct the list, and wait; an out-of-scope line they pull back in is
+      sorted again as an INSIDE gap. One short read for
       the user is cheaper than one rebuild for everyone.
 
       THE LIST IS CHAT TEXT, NEVER TOOL INPUT. Write the whole list in the
@@ -174,28 +241,35 @@ artifacts:
       - the coverage table, with each row's triage bucket
       - what was resolved by convention, and the file each answer came from
       - the premise check and the user's response to it
+      - the ownership table: one row per thing from the ownership walk,
+        each of its five answers with its source (the user's answer, a
+        context or spec file, or ASSUMED)
       - each question as asked, with the user's answer verbatim
       - what was deferred to design.md
       - Assumptions: the confirmed list from Phase 5, still marked ASSUMED
+      - Out of scope: the confirmed out-of-scope lines from Phase 5
       </phase_6_write>
 
       <final_check>
       Before each user-facing message and before writing discovery.md,
       verify:
       1. The premise was challenged exactly once (Phase 3.2).
-      2. Questions were sent one per message, and question count is within
-         3-5 unless the user stopped early.
+      2. Questions were sent one per message. Every INSIDE one-way door was
+         asked, or the user stopped early and each unasked one is ASSUMED
+         at its safe side; no two-way door or outside gap was asked.
       3. No option anywhere is marked, ordered, or worded as recommended.
       4. The assumption list was shown and confirmed before the file was
          written — shown as chat text, in full, in every message that asked
          about it.
-      5. Mechanical vocabulary check — these strings appear nowhere in any
+      5. Every thing the change stores, shows, or sends has an ownership
+         row with all five answers sourced.
+      6. Mechanical vocabulary check — these strings appear nowhere in any
          user-facing question, option, or assumption (this list is for
          verification only; generate from the translation table, not from
          this list): schema, migration, persistence, persist, endpoint,
          API, non-functional, idempotent, race condition, index, cache,
          transaction, state management, coupling, refactor, latency,
-         throughput, backend, frontend.
+         throughput, backend, frontend, ACL, RLS, tenant, PII.
       </final_check>
     requires: []
 
@@ -299,11 +373,15 @@ artifacts:
 
       EDGE CASES PER REQUIREMENT. For each requirement, account for each
       of these cases where it applies: the empty/first-use case, the
-      failure case, the permission-denied case (if access-controlled), and
-      limits or undo (if it changes data). Each one is either a scenario or
-      one explicit line: "Out of scope: <case> — <one-line reason>".
+      failure case, the other-person case (if it touches a thing in
+      discovery's ownership table), and limits or undo (if it changes
+      data). Each one is either a scenario or one explicit line:
+      "Out of scope: <case> — <one-line reason>". The other-person case is
+      what a different signed-in person, and a signed-out visitor, get when
+      they try to see or change the thing; it is never out of scope.
 
-      CROSS-CHECK against discovery.md. Every answer the user gave must
+      CROSS-CHECK against discovery.md. Every answer the user gave, and
+      every ownership row's audience, control, and exit answers, must
       appear here as a requirement or an explicit non-goal. If one does
       not, add it.
 
@@ -380,7 +458,7 @@ artifacts:
       ```
 
       FINAL CHECK before finishing: every THEN passes the falsifiability
-      test above; every requirement's empty, failure, permission, and
+      test above; every requirement's empty, failure, other-person, and
       limit/undo cases are either scenarios or explicit out-of-scope lines;
       every discovery.md answer is a requirement or a non-goal.
 
@@ -411,6 +489,10 @@ artifacts:
       - **Risks / Trade-offs**: Known limitations, things that could go wrong. Format: [Risk] → Mitigation. Call out anything that could break existing behavior.
       - **Migration Plan**: Steps to deploy, rollback strategy (if applicable)
       - **Open Questions**: Unknowns that are not load-bearing. Omit if none.
+
+      For each row of discovery's ownership table, name the mechanism that
+      enforces its audience and control, and the test that proves a
+      different person is refused.
 
       List every existing file or module this change touches, and say whether
       it is read, modified, or replaced. Follow the conventions discovery.md

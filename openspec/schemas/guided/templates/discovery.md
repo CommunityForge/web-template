@@ -15,7 +15,7 @@ Date: [YYYY-MM-DD]
 | Persistence                |                           |        |      |
 | Interaction & states       |                           |        |      |
 | Data operations            |                           |        |      |
-| Access & permissions       |                           |        |      |
+| Ownership & access         |                           |        |      |
 | Non-functional             |                           |        |      |
 | Integration points         |                           |        |      |
 | Migration of existing data |                           |        |      |
@@ -30,6 +30,15 @@ Date: [YYYY-MM-DD]
 | Question it would have been | Answer                              | Source |
 | --------------------------- | ----------------------------------- | ------ |
 | [gap]                       | [what the codebase already decides] | [file] |
+
+## Ownership
+
+<!-- One row per thing the change stores, shows, or sends. Each cell is the
+     answer and its source: (asked), a context or spec file, or ASSUMED. -->
+
+| Thing   | Sensitive | Owner | Place | Audience | Control | Exit |
+| ------- | --------- | ----- | ----- | -------- | ------- | ---- |
+| [thing] | yes / no  |       |       |          |         |      |
 
 ## Clarifications
 
@@ -57,5 +66,7 @@ Date: [YYYY-MM-DD]
 - ASSUMED: [statement]
 
 ## Out of scope
+
+<!-- Gaps sorted outside this feature, as the user confirmed them. -->
 
 - [item]
