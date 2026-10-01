@@ -4,6 +4,8 @@ Postgres: the client layer (`Pg`), the schema (DDL authored in TypeScript and ap
 standing exposure audit (`bin/audit.ts`), and the repositories over the tables, one module per table family. It ships
 no table today; the recipe below is what the first one follows.
 
+Load `supabase-postgres-best-practices` and `supabase` before designing or writing a table, policy, grant or query.
+
 `@replaceme/domain` is the one workspace dependency: repositories are typed in terms of the domain's branded ids and
 never re-declare a shape. The database is named one of two ways through the ambient `ConfigProvider`, with no defaults,
 so a missing credential stops the process rather than quietly connecting somewhere: the five `DB_*` variables
@@ -95,6 +97,10 @@ migration is immutable: change the schema by adding a file and a key.
 
 Applying DDL is an operational boundary: `bin/migrate.ts` is a program an operator runs, and nothing on a request path
 reaches it. GoTrue owns `auth.*`; this package owns `public`, through its own `effect_sql_migrations` ledger.
+
+That ownership is why the `supabase` skill's migration workflow does not apply here. Its security checklist does, on
+top of the two recipes below: `WITH CHECK` beside `USING` on every update policy, `security_invoker = true` on every
+view, and `SECURITY DEFINER` functions kept out of `public`.
 
 DDL comments carry what a column type cannot: a value's frame, unit, and which normalization a text key has already had
 applied.

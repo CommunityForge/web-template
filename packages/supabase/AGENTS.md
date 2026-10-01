@@ -3,6 +3,8 @@
 Effect bindings for `supabase-js`, and nothing else. The package owns the _shape_ of a Supabase token and session;
 what those claims mean is `@replaceme/domain`'s business, and `@replaceme/domain` is the only workspace dependency.
 
+Load `supabase` before wrapping a new SDK call or designing anything over Auth, Storage or Realtime.
+
 | Module           | Owns                                                                                  |
 | ---------------- | ------------------------------------------------------------------------------------- |
 | `SupabaseClient` | The wrapped client as a service, plus the `redirectTo` the SDK has no slot for        |
@@ -25,9 +27,15 @@ root.
 user-editable and is not modeled at all. A decode failure is one opaque `Unauthorized`, so claim material never echoes
 back to the caller.
 
-`supabase-js` _resolves_ on an authentication failure and reports it in the result's `error` field. `SupabaseAuth`
-lifts that field into the typed failure channel; a wrapper that only guards the promise reports every rejected password
-as a success. Failures map on `AuthError.code`, a documented enum, never on message text.
+## Wrapping an SDK call
+
+`supabase-js` _resolves_ on a failure and reports it in the result's `error` field. `SupabaseAuth` lifts that field into
+the typed failure channel; a wrapper that only guards the promise reports every rejected password as a success.
+Failures map on a documented code (`AuthError.code` for Auth), never on message text.
+
+Storage and Realtime are enabled locally and have no binding yet. A binding for either is a new module here that follows
+`SupabaseAuth`: whatever the SDK reports as a failure becomes a tagged failure, mapped on its documented code. Realtime
+reports through channel status rather than a resolved `error`, so its lift sits at the subscription.
 
 ## Tests
 

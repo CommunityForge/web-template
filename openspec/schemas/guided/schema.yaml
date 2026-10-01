@@ -20,6 +20,15 @@ artifacts:
       Read the root AGENTS.md and any nested per-unit AGENTS.md, the existing
       capabilities, and the lint, type, and test configuration.
 
+      Then load every skill the root AGENTS.md routes to for an area this
+      request could touch. They change the triage two ways: a gap the
+      platform already settles (how an audience is enforced, how files are
+      kept, how live updates arrive) is CONVENTION or DESIGN, with the skill
+      as its source, rather than PRODUCT; and what the platform already
+      offers changes what an option costs, a cost you state in product
+      words. Every question, option and assumption stays in the translation
+      table's language.
+
       Take the capability inventory with `openspec list --specs`, then skim
       any that look related with
       `openspec show "<spec-id>" --type spec --json --no-scenarios` - that
@@ -269,7 +278,9 @@ artifacts:
          this list): schema, migration, persistence, persist, endpoint,
          API, non-functional, idempotent, race condition, index, cache,
          transaction, state management, coupling, refactor, latency,
-         throughput, backend, frontend, ACL, RLS, tenant, PII.
+         throughput, backend, frontend, ACL, RLS, tenant, PII, Supabase,
+         Postgres, SQL, policy, row security, bucket, JWT, token, session,
+         table.
       </final_check>
     requires: []
 
@@ -476,6 +487,11 @@ artifacts:
       vocabulary belongs. Everything discovery.md triaged as DESIGN is
       resolved here, by you - do not take those back to the user.
 
+      Before Decisions, load the skills the root AGENTS.md routes to for
+      every area the change touches, and every touched unit's AGENTS.md.
+      Where a skill's workflow conflicts with a unit's AGENTS.md, follow the
+      unit and say so in Decisions.
+
       When to include design.md (create only if any apply):
       - Cross-cutting change (multiple services/modules) or new architectural pattern
       - New external dependency or significant data model changes
@@ -491,8 +507,9 @@ artifacts:
       - **Open Questions**: Unknowns that are not load-bearing. Omit if none.
 
       For each row of discovery's ownership table, name the mechanism that
-      enforces its audience and control, and the test that proves a
-      different person is refused.
+      enforces its audience and control, taken from packages/db's ownership
+      and exposure recipes and checked against the supabase skill's security
+      checklist, and the test that proves a different person is refused.
 
       List every existing file or module this change touches, and say whether
       it is read, modified, or replaced. Follow the conventions discovery.md
