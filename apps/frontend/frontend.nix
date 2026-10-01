@@ -6,7 +6,7 @@ _: {
     in
     {
       packages.frontend = buildPnpmPackage {
-        hash = "sha256-SQgx4W+bvmUfhK4Lfe0vYU9uhuAngrrttmIxG12VdUU=";
+        hash = "sha256-IOgqfQWhy/8LNR07uC625vwyw2i2OjdGkXmCWJY2+Rg=";
         packageJsonPath = ./package.json;
         pnpmWorkspaces = [ "@replaceme/frontend" ];
         extraSrcs = fs.unions [

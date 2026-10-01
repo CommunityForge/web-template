@@ -148,12 +148,23 @@ let
               {"packages": (select(fileIndex == 1).packages)}
             ' pnpm-workspace.yaml "$PKGFILE"
 
+            # Fetch only the platform binaries a build can run on. The stock fetcher passes
+            # `--force`, which pulls EVERY platform's optional binaries (AIX, FreeBSD, Windows, ...)
+            # and roughly doubles the snapshot. The lists are explicit rather than "current" ON
+            # PURPOSE: the fixed-output hash must not depend on which system ran the fetch.
+            ${pkgs.yq-go}/bin/yq -i '
+              .supportedArchitectures = {
+                "os": ["linux", "darwin"],
+                "cpu": ["x64", "arm64"],
+                "libc": ["glibc"]
+              }
+            ' pnpm-workspace.yaml
+
             echo "Narrowed workspace to:"
             ${pkgs.yq-go}/bin/yq -r '.packages[]' pnpm-workspace.yaml | sed 's/^/  - /'
 
             # Produce a pruned lockfile derived from the shared root lockfile.
             pnpm install \
-              --force \
               --lockfile-only \
               --ignore-scripts \
               ${pkgs.lib.escapeShellArgs filterFlags} \
@@ -164,7 +175,6 @@ let
 
             # Fetch into the store.
             pnpm install \
-              --force \
               --ignore-scripts \
               --registry="$NIX_NPM_REGISTRY" \
               --frozen-lockfile
