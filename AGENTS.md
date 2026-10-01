@@ -17,6 +17,28 @@ search through the source code in `node_modules/effect/src`.
 `effect` is a root dev dependency (`catalog:effect`) only so those two paths resolve from the repo
 root; every workspace unit declares its own dependency as well.
 
+## Platform skills
+
+Supabase is the platform: `supabase/config.toml` enables Postgres, Auth, Storage and Realtime. The
+repo reaches it through two units only: `packages/supabase` (the supabase-js client, the `Auth`
+adapter, and the claim decoding `apps/server` uses) and `packages/db` (Postgres, DDL, exposure
+audit, repositories). Storage and Realtime have no binding yet; a change that needs one adds a
+module to `packages/supabase`.
+
+Load the routed skills when **planning** a change that touches an area, as well as when writing its
+code:
+
+| A change touches                                        | Load                                              |
+| ------------------------------------------------------- | ------------------------------------------------- |
+| Stored, shared or owned data; tables, policies, queries | `supabase-postgres-best-practices` and `supabase` |
+| Sign-in, sessions, tokens, files, live updates          | `supabase`                                        |
+| Screens and client state                                | `effect-atom-react`, plus `shadcn` for components |
+
+Where a skill and a unit's `AGENTS.md` disagree, the unit wins. The main case: a schema change is
+always a `packages/db` migration, never the Supabase CLI's migration commands.
+
+The skills inform your reasoning. The person you work with hears product language only.
+
 ## Commands
 
 Every command in this file assumes the dev shell (`direnv allow`, or `nix develop -c <cmd>`). Node,
