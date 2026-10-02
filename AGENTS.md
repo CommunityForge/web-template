@@ -73,6 +73,11 @@ workflow lint — ON PURPOSE: `nix flake check` also builds every unit, which CI
 request anyway and which takes longer on one core than a push can wait. A commit whose files the
 formatter changed fails once; stage the reformatted files and commit again.
 
+CI mirrors the split. `check.yml` runs `nix flake check` in one job on every pull request and on
+`main`, where it also saves the whole Nix store to the Actions cache that every later Check, Preview
+and Deploy job restores from, so a job builds only what its commit changed. `deploy.yml` runs after
+Check passes on `main` and deploys that same commit.
+
 ## Layout
 
 ```
