@@ -36,9 +36,15 @@ jobs:
       # `nix flake check` roots nothing, so without this the garbage collection that precedes the
       # save would delete the very outputs the snapshot exists to carry. Out-links under the
       # runner's temp directory live until the job ends, which is after the post-phase save.
-      - name: Root the check outputs for the snapshot
+      # The flake inputs' source trees are rooted too: evaluation copies each one into the store,
+      # no output references them, and nixpkgs alone is 330 MB that every job would otherwise
+      # download again before it can evaluate.
+      - name: Root the check outputs and the flake inputs for the snapshot
         if: github.ref == 'refs/heads/main'
         run: |
           nix eval --raw .#checks.x86_64-linux \
             --apply 'checks: builtins.concatStringsSep "\n" (map (name: ".#checks.x86_64-linux." + name) (builtins.attrNames checks))' \
             | xargs nix build --out-link "$RUNNER_TEMP/roots/check"
+          nix flake archive --json \
+            | jq -r '.. | .path? // empty' \
+            | xargs nix build --out-link "$RUNNER_TEMP/roots/input"
