@@ -1,7 +1,13 @@
 name: Deploy to Cloudflare Worker
 
 on:
-  push:
+  # Runs when Check finishes on `main`, and deploys only if Check passed, so what reaches
+  # production is exactly the commit every check accepted. A separate workflow rather than a job
+  # in Check ON PURPOSE: `bin/align-probe.sh` reads the newest `deploy.yml` run on `main` to tell
+  # whether the live site is current.
+  workflow_run:
+    workflows: [Check]
+    types: [completed]
     branches: [main]
   workflow_dispatch:
 
@@ -11,13 +17,14 @@ concurrency:
 
 jobs:
   deploy:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     environment:
       name: production
       url: ${{ steps.deploy.outputs.url }}
     permissions:
-      # No `id-token` ON PURPOSE: with it, the Nix installer and Magic Nix Cache each spend seconds
-      # on a FlakeHub sign-in this repository has no account for. Nothing here uses OIDC.
+      # No `id-token` ON PURPOSE: with it, the Nix installer spends seconds on a FlakeHub sign-in
+      # this repository has no account for. Nothing here uses OIDC.
       contents: read
     steps:
       - name: Require the deployment settings
@@ -37,18 +44,15 @@ jobs:
           # The database reaches the Worker one of two ways: a Hyperdrive binding (the id is a
           # variable) or a connection string (a secret). One of them has to be set.
           [ -n "$HYPERDRIVE_ID" ] || [ -n "$DB_URL" ] || { echo "::error::Set the repository variable CLOUDFLARE_HYPERDRIVE_ID or the secret DB_URL so the Worker can reach Postgres $where" && exit 1; }
-      - uses: actions/checkout@v4
-      # Magic Nix Cache registers itself ahead of cache.nixos.org, so every nixpkgs path would
-      # otherwise be looked up (and re-uploaded) through the rate-limited GitHub Actions cache.
-      # Priority 0 puts the official cache first; the Actions cache then serves only this flake's
-      # own outputs.
-      - uses: DeterminateSystems/nix-installer-action@main
+      # The commit Check ran on, not the branch head: a push that lands while Check is still
+      # running must not get deployed ahead of its own Check.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          extra-conf: |
-            substituters = https://cache.nixos.org?priority=0
-      - uses: DeterminateSystems/magic-nix-cache-action@main
-      - name: Check
-        run: nix flake check
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      # Restores the snapshot the Check run that triggered this one saved, so the build below is
+      # substitution, not compilation. No `nix flake check` here: Check already ran every check on
+      # this commit, and this job does not start unless they passed.
+      - uses: ./.github/actions/nix
       - name: Build
         working-directory: apps/server
         run: nix build "$GITHUB_WORKSPACE#server-worker"
@@ -89,7 +93,9 @@ jobs:
             jq -n --arg url "$DB_URL" '{ DB_URL: $url }' > "$RUNNER_TEMP/secrets.json"
             args+=(--secrets-file "$RUNNER_TEMP/secrets.json")
           fi
-          nix run nixpkgs#wrangler -- "${args[@]}"
+          # `--inputs-from` resolves `nixpkgs` to the flake's locked input, so this deploys with the
+          # same wrangler the dev shell and the preview run, out of the restored snapshot.
+          nix run --inputs-from "$GITHUB_WORKSPACE" nixpkgs#wrangler -- "${args[@]}"
           # The custom domain wins once a fork sets it; until then the badge links to workers.dev.
           url="${PRODUCTION_URL:-$(jq -r 'select(.type == "deploy") | .targets[0] // empty' "$WRANGLER_OUTPUT_FILE_PATH")}"
           if [ -z "$url" ]; then

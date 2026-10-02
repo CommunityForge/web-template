@@ -4,7 +4,7 @@
 #
 # Builds only the checks that finish in seconds on a warm cache: formatting,
 # spelling and workflow lint. `nix flake check` would also build every package,
-# which is CI's job (`check.yml` runs the whole matrix on the pull request) and
+# which is CI's job (`check.yml` runs every check on the pull request) and
 # takes longer on one core than a push should ever wait -- long enough that an
 # agent's tool call gives up on the push first.
 

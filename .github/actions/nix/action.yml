@@ -1,0 +1,56 @@
+name: Nix with a store snapshot
+description: >-
+  Install Determinate Nix and restore the whole Nix store from the newest snapshot in the GitHub
+  Actions cache. The snapshot holds the nixpkgs build closure, every unit's pnpm snapshot and every
+  output `main` last built, so a job that follows it only builds what its commit changed. Pull
+  requests restore and never save: a save is a 1 to 2 GB cache entry, and one per pull request would
+  thrash the repository's 10 GB cap. The one saving job is Check on `main`.
+
+inputs:
+  save:
+    description: >-
+      Save a new snapshot when the job succeeds. Only Check on `main` passes `true`; the saving job
+      needs `permissions: actions: write` so the save can purge the snapshots it supersedes.
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    # `determinate-nix-action` rather than `nix-installer-action`: it is the Determinate installer
+    # cache-nix-action documents as compatible, and its tag pins the Nix version instead of
+    # tracking the installer's latest release. `keep-outputs` and `keep-derivations` make the
+    # garbage collector that runs before a save keep the build closure (pnpm snapshots, the node
+    # toolchain) of every rooted output, not just the outputs themselves.
+    - uses: DeterminateSystems/determinate-nix-action@8d87e8d5e5b8a8309d4281094560f127d9a265f1 # v3.22.5
+      if: ${{ !env.ACT }}
+      with:
+        extra-conf: |
+          keep-outputs = true
+          keep-derivations = true
+    # The key ends in the commit so every `main` run saves a fresh snapshot; a miss falls back to
+    # the newest snapshot of the same lock files, then to the newest of any (a lockfile bump still
+    # restores the pnpm snapshots that did not change). `~/.cache/nix` rides along so the flake
+    # inputs' git clones and the evaluation cache come back too, instead of being refetched by
+    # every job before evaluation can start.
+    #
+    # The save runs in this action's post phase, only when the job succeeded. Before saving it
+    # collects garbage down to the size below, so a snapshot does not carry every past commit's
+    # source tree, then deletes the superseded snapshots on this ref that no run has touched in the
+    # last hour: a prefix restore always picks the newest, so an older one is only ever read by a
+    # job that was already running.
+    - uses: nix-community/cache-nix-action@7df957e333c1e5da7721f60227dbba6d06080569 # v7.0.2
+      if: ${{ !env.ACT }}
+      with:
+        primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.lock', 'pnpm-lock.yaml') }}-${{ github.sha }}
+        restore-prefixes-first-match: |
+          nix-${{ runner.os }}-${{ hashFiles('flake.lock', 'pnpm-lock.yaml') }}-
+          nix-${{ runner.os }}-
+        paths: |
+          ~/.cache/nix
+        save: ${{ inputs.save }}
+        gc-max-store-size-linux: 4G
+        purge: ${{ inputs.save }}
+        purge-prefixes: nix-${{ runner.os }}-
+        purge-last-accessed: PT1H
+        purge-primary-key: never
