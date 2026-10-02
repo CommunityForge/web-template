@@ -16,8 +16,8 @@ jobs:
       name: preview
       url: ${{ steps.upload.outputs.url }}
     permissions:
-      # No `id-token` ON PURPOSE: with it, the Nix installer and Magic Nix Cache each spend seconds
-      # on a FlakeHub sign-in this repository has no account for. Nothing here uses OIDC.
+      # No `id-token` ON PURPOSE: with it, the Nix installer spends seconds on a FlakeHub sign-in
+      # this repository has no account for. Nothing here uses OIDC.
       contents: read
       pull-requests: write
       # The wait below reads the `Supabase Preview` check run the integration posts.
@@ -39,23 +39,22 @@ jobs:
           # are what the lookup needs.
           [ -n "$SUPABASE_PROJECT_REF" ] || { echo "::error::Set the repository variable SUPABASE_PROJECT_REF to the production Supabase project's reference $where" && exit 1; }
           [ -n "$SUPABASE_ACCESS_TOKEN" ] || { echo "::error::Set the repository secret SUPABASE_ACCESS_TOKEN to a Supabase personal access token that can read the project's branches $where" && exit 1; }
-      - uses: actions/checkout@v4
-      # Magic Nix Cache registers itself ahead of cache.nixos.org, so every nixpkgs path would
-      # otherwise be looked up (and re-uploaded) through the rate-limited GitHub Actions cache.
-      # Priority 0 puts the official cache first; the Actions cache then serves only this flake's
-      # own outputs.
-      - uses: DeterminateSystems/nix-installer-action@main
-        with:
-          extra-conf: |
-            substituters = https://cache.nixos.org?priority=0
-      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # Restores the store snapshot Check last saved on `main`, so this builds only the units the
+      # pull request changed. Pull requests never save a snapshot.
+      - uses: ./.github/actions/nix
       # Building first: the branch is usually still coming up when the job starts, and the build is
       # the one step that needs nothing from it. The migrator is realized here too, beside the
       # Worker, so the migrate step below finds it in the store. `server-worker` stays FIRST:
       # `nix build` links installables in order, and `result` is the directory wrangler serves.
+      # The second command realizes the two CLIs the later steps run, from the flake's own locked
+      # nixpkgs (`--inputs-from`), so they come out of the restored snapshot rather than a fresh
+      # tarball, and the preview uploads with the same wrangler the lock file names.
       - name: Build
         working-directory: apps/server
-        run: nix build "$GITHUB_WORKSPACE#server-worker" "$GITHUB_WORKSPACE#db-migrator"
+        run: |
+          nix build "$GITHUB_WORKSPACE#server-worker" "$GITHUB_WORKSPACE#db-migrator"
+          nix build --no-link --inputs-from "$GITHUB_WORKSPACE" nixpkgs#wrangler nixpkgs#supabase-cli
       - name: Wait for the pull request's Supabase branch
         env:
           GH_TOKEN: ${{ github.token }}
@@ -92,7 +91,7 @@ jobs:
           SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
           BRANCH: ${{ github.event.pull_request.head.ref }}
         run: |
-          nix run nixpkgs#supabase-cli -- branches get "$BRANCH" --project-ref "$SUPABASE_PROJECT_REF" --output env > "$RUNNER_TEMP/branch.env"
+          nix run --inputs-from "$GITHUB_WORKSPACE" nixpkgs#supabase-cli -- branches get "$BRANCH" --project-ref "$SUPABASE_PROJECT_REF" --output env > "$RUNNER_TEMP/branch.env"
           # Every value in that file is a credential or names one. Mask them all before anything
           # below can echo one.
           while IFS='=' read -r key raw; do
@@ -167,12 +166,12 @@ jobs:
           # `versions upload` reads that switch but never sets it; `triggers deploy` applies the
           # `workers_dev`/`preview_urls` settings from the config, so a Worker created by hand in
           # the dashboard needs no manual toggle.
-          nix run nixpkgs#wrangler -- triggers deploy --config "$CONFIG" --name "$WORKER_NAME"
+          nix run --inputs-from "$GITHUB_WORKSPACE" nixpkgs#wrangler -- triggers deploy --config "$CONFIG" --name "$WORKER_NAME"
           # The branch's connection string travels as a secret, never a var, so it shows in neither
           # the dashboard nor this log.
           jq -n --arg url "$PREVIEW_DB_URL" '{ DB_URL: $url }' > "$RUNNER_TEMP/secrets.json"
           # `pr-<n>` is a stable alias, so the URL stays the same across pushes to the same PR.
-          nix run nixpkgs#wrangler -- versions upload \
+          nix run --inputs-from "$GITHUB_WORKSPACE" nixpkgs#wrangler -- versions upload \
             --config "$CONFIG" \
             --name "$WORKER_NAME" \
             --preview-alias "pr-${PR_NUMBER}" \

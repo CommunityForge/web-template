@@ -8,47 +8,37 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # A cancelled `main` run saves no store snapshot, and the snapshot is what every later job
+  # restores from, so `main` runs always finish. Pull requests still cancel on a new push.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
-  discover:
-    runs-on: ubuntu-latest
-    outputs:
-      checks: ${{ steps.list.outputs.checks }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: DeterminateSystems/nix-installer-action@main
-        if: ${{ !env.ACT }}
-      - id: list
-        run: |
-          checks=$(nix eval --json .#checks.x86_64-linux --apply builtins.attrNames)
-          if [ "$checks" = "[]" ]; then
-            echo "::error::no checks found in flake" && exit 1
-          fi
-          echo "checks=$checks" >> "$GITHUB_OUTPUT"
-
   check:
-    needs: discover
     runs-on: ubuntu-latest
     permissions:
-      # No `id-token` ON PURPOSE: with it, the Nix installer and Magic Nix Cache each spend seconds
-      # on a FlakeHub sign-in this repository has no account for. Nothing here uses OIDC.
+      # No `id-token` ON PURPOSE: with it, the Nix installer spends seconds on a FlakeHub sign-in
+      # this repository has no account for. Nothing here uses OIDC.
       contents: read
-    strategy:
-      fail-fast: false
-      matrix:
-        check: ${{ fromJSON(needs.discover.outputs.checks) }}
+      # `main` saves the store snapshot and deletes the ones it supersedes, and deleting caches
+      # needs Actions write. Permissions cannot be conditional, so pull requests carry it too; they
+      # only restore, and a fork's or Dependabot's token is read-only regardless.
+      actions: write
     steps:
-      - uses: actions/checkout@v4
-      # Magic Nix Cache registers itself ahead of cache.nixos.org, so every nixpkgs path would
-      # otherwise be looked up (and re-uploaded) through the rate-limited GitHub Actions cache.
-      # Priority 0 puts the official cache first; the Actions cache then serves only this flake's
-      # own outputs.
-      - uses: DeterminateSystems/nix-installer-action@main
-        if: ${{ !env.ACT }}
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/nix
         with:
-          extra-conf: |
-            substituters = https://cache.nixos.org?priority=0
-      - uses: DeterminateSystems/magic-nix-cache-action@main
-        if: ${{ !env.ACT }}
-      - run: nix build .#checks.x86_64-linux.${{ matrix.check }} -L --no-link
+          save: ${{ github.ref == 'refs/heads/main' }}
+      # One job for every check, not a matrix: a whole-store snapshot can only be taken from one
+      # store, and one restore serves all of them. `--keep-going` reports every failing check
+      # rather than the first; `-L` keeps the failing derivation's log in this output.
+      - name: Check
+        run: nix flake check -L --keep-going
+      # `nix flake check` roots nothing, so without this the garbage collection that precedes the
+      # save would delete the very outputs the snapshot exists to carry. Out-links under the
+      # runner's temp directory live until the job ends, which is after the post-phase save.
+      - name: Root the check outputs for the snapshot
+        if: github.ref == 'refs/heads/main'
+        run: |
+          nix eval --raw .#checks.x86_64-linux \
+            --apply 'checks: builtins.concatStringsSep "\n" (map (name: ".#checks.x86_64-linux." + name) (builtins.attrNames checks))' \
+            | xargs nix build --out-link "$RUNNER_TEMP/roots/check"

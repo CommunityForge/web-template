@@ -1,0 +1,10 @@
+# Every `uses:` is pinned to a commit, with the release in a trailing comment. Dependabot moves the
+# pins through reviewed pull requests and keeps the comments current.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directories:
+      - "/"
+      - "/.github/actions/*"
+    schedule:
+      interval: weekly
