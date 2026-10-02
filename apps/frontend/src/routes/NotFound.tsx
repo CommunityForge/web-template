@@ -24,7 +24,7 @@ export function NotFound() {
     <section className="flex grow flex-col place-content-center place-items-center px-5 py-8">
       <p className={STATUS}>404</p>
       <h1 className={HEADING}>Page not found</h1>
-      <p className="mb-8 max-w-[36ch]">That URL does not match any route in this app.</p>
+      <p className="mb-8 max-w-[36ch]">There is no page at this address.</p>
       <ReactRouter.Link
         to="/"
         className={LINK}
