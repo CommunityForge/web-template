@@ -14,21 +14,53 @@
  * migration. Keys are `<id>_<name>` and are applied in id order. An applied migration is immutable; change the schema
  * by adding a file and a key.
  *
+ * Every migration runs under `lock_timeout`. DDL such as `ALTER TABLE` queues for an `ACCESS EXCLUSIVE` lock, and every
+ * query arriving behind it queues too, so a migration stuck behind one long-running query would stall the live
+ * application for as long as that query runs. With the timeout, the migration fails instead, the migrator's single
+ * transaction commits nothing, and a re-run retries it. The setting is `SET LOCAL` in effect, scoped to the migrator's
+ * transaction, and is applied per migration rather than around the migrator ON PURPOSE: the migrator's first statement
+ * on a fresh database is a probe that fails by design, which would abort any transaction opened around it. A migration
+ * that knowingly needs a longer wait states its own `set_config('lock_timeout', ..., true)` first thing.
+ *
  * @since 0.0.0
  */
 
 import * as PgMigrator from "@effect/sql-pg/PgMigrator"
+import * as Effect from "effect/Effect"
+import * as Record from "effect/Record"
 import * as Migrator from "effect/unstable/sql/Migrator"
+import * as SqlClient from "effect/unstable/sql/SqlClient"
 
 import * as DataApiLockdown from "./migrations/0001_data_api_lockdown.js"
+
+/**
+ * How long a migration's statement waits for a lock before it fails, as Postgres reads `lock_timeout`.
+ *
+ * @since 0.0.0
+ * @category constants
+ */
+export const LOCK_TIMEOUT = "5s"
+
+const underLockTimeout = (
+  migration: Effect.Effect<void, unknown, SqlClient.SqlClient>,
+): Effect.Effect<void, unknown, SqlClient.SqlClient> =>
+  SqlClient.SqlClient.pipe(
+    Effect.flatMap((sql) => sql`select set_config('lock_timeout', ${LOCK_TIMEOUT}, true)`),
+    Effect.andThen(migration),
+  )
 
 /**
  * @since 0.0.0
  * @category loaders
  */
-export const migrations: Migrator.Loader = Migrator.fromRecord({
-  "0001_data_api_lockdown": DataApiLockdown.migration,
-})
+export const migrations: Migrator.Loader = Migrator.fromRecord(
+  Record.map(
+    {
+      "0001_data_api_lockdown": DataApiLockdown.migration,
+    },
+    underLockTimeout,
+  ),
+)
 
 /**
  * Runs pending migrations and reports which were applied.
