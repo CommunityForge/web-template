@@ -41,9 +41,9 @@ jobs:
           [ -n "$PUBLIC_SUPABASE_URL" ] || { echo "::error::Set the repository variable PUBLIC_SUPABASE_URL to the production Supabase project URL $where" && exit 1; }
           [ -n "$APP_ORIGINS" ] || { echo "::error::Set the repository variable APP_ORIGINS to the comma-separated origins allowed to call the API $where" && exit 1; }
           [ -n "$LOG_LEVEL" ] || { echo "::error::Set the repository variable LOG_LEVEL to an Effect log level such as Info $where" && exit 1; }
-          # The database reaches the Worker one of two ways: a Hyperdrive binding (the id is a
-          # variable) or a connection string (a secret). One of them has to be set.
-          [ -n "$HYPERDRIVE_ID" ] || [ -n "$DB_URL" ] || { echo "::error::Set the repository variable CLOUDFLARE_HYPERDRIVE_ID or the secret DB_URL so the Worker can reach Postgres $where" && exit 1; }
+          # Required even with a Hyperdrive bound: the binding exists only inside the Worker, and the
+          # migration step below needs a direct connection string.
+          [ -n "$DB_URL" ] || { echo "::error::Set the secret DB_URL to the production Supabase session pooler's connection string (port 5432), used to migrate the database and, when no Hyperdrive is bound, by the Worker $where" && exit 1; }
       # The commit Check ran on, not the branch head: a push that lands while Check is still
       # running must not get deployed ahead of its own Check.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -55,13 +55,24 @@ jobs:
       - uses: ./.github/actions/nix
       - name: Build
         working-directory: apps/server
-        run: nix build "$GITHUB_WORKSPACE#server-worker"
+        # `server-worker` first, so `result` still names the Worker. `db-migrator` is in `checks`, so
+        # it too comes out of the restored snapshot.
+        run: nix build "$GITHUB_WORKSPACE#server-worker" "$GITHUB_WORKSPACE#db-migrator"
       - name: Wrangler config
         id: config
         uses: ./.github/actions/wrangler-config
         with:
           working-directory: apps/server
           hyperdrive-id: ${{ vars.CLOUDFLARE_HYPERDRIVE_ID }}
+      # Migrate, then audit, before the new code goes live: if either fails, nothing deploys, so new
+      # code never serves against an old schema. The previous code serves against the new schema
+      # until the deploy below finishes (and indefinitely if it fails, or after a rollback), which
+      # is why every migration must be backward compatible. Re-running is safe: the migrator
+      # applies only what the ledger lacks, all of it in one transaction.
+      - name: Migrate production
+        env:
+          DB_URL: ${{ secrets.DB_URL }}
+        run: nix run "$GITHUB_WORKSPACE#db-migrator"
       - name: Deploy
         id: deploy
         working-directory: apps/server

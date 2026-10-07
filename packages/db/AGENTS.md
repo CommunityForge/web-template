@@ -105,6 +105,29 @@ view, and `SECURITY DEFINER` functions kept out of `public`.
 DDL comments carry what a column type cannot: a value's frame, unit, and which normalization a text key has already had
 applied.
 
+CI is the operator that matters: a pull request's preview migrates its own Supabase branch, and **merging to `main`
+migrates production**, then audits it, before the new Worker deploys. A failed migration or audit stops the deploy.
+
+Every migration runs under `Migrator.LOCK_TIMEOUT`: a statement that cannot get its lock in time fails the run, and the
+migrator's one transaction commits nothing, rather than queuing live traffic behind it. Re-running the deploy retries.
+A migration that knowingly needs a longer wait sets its own `set_config('lock_timeout', ..., true)` first.
+
+### Every migration is backward compatible
+
+Production runs the PREVIOUS code against the NEW schema: for the seconds between the migration committing and the new
+Worker going live, indefinitely if the deploy step fails, and after any rollback, since dispatching Deploy on an older
+commit applies nothing (the ledger is already ahead) and only swaps the code. So a migration only adds, and anything
+else is staged across merges:
+
+- Add a table, a nullable column, or a column with a default; add an index; add a grant with its policy.
+- Remove or rename in two merges: first stop the code using the old thing (a rename adds the new one and writes both),
+  then drop it in a later migration once no deployed code reads it.
+- Tightening a constraint (`not null`, a check) comes after the code that always satisfies it is live.
+
+Nothing enforces this; it is review discipline. An audit failure does not undo a migration either: the audit runs after
+the migration commits, so the new schema stays live while the deploy is blocked. The preview runs the same
+migrate-then-audit against a branch database first, which is where both should surface.
+
 ### A user-owned table carries ownership three times
 
 `user_id uuid not null references auth.users (id) on delete cascade`; row security enabled with a policy whose predicate

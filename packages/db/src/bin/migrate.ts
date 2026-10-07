@@ -4,7 +4,9 @@
  * The entry point behind `nix run .#db-migrate`. It is a program rather than a startup layer on the server because
  * migration is an operational boundary, not something an application does on its way up — two applications share this
  * database, and neither should race the other to migrate it. Nothing on a request path may reach this program: it is
- * invoked by an operator, and applying DDL is never a consequence of serving a request.
+ * invoked by an operator, and applying DDL is never a consequence of serving a request. CI is an operator too: the
+ * preview job runs it against a pull request's branch database, and the deploy job against production before the new
+ * Worker goes live, so a merge to `main` migrates production.
  *
  * `supabase db reset` recreates `auth.*` and wipes `public` — including `effect_sql_migrations` — so this must run
  * after any reset. That is the standing cost of Effect owning the DDL rather than the Supabase CLI, and it is why this

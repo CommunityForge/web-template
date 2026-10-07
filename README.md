@@ -50,21 +50,22 @@ Only GitHub deploys; nothing is ever published from a laptop. One Cloudflare Wor
 and the API (`/api/*`) from one origin. A fork sets these once, under the repository's Settings →
 Secrets and variables → Actions:
 
-| Kind     | Name                       | Is                                                                                                                                |
-| -------- | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| Secret   | `CLOUDFLARE_API_TOKEN`     | A Cloudflare API token allowed to edit Workers                                                                                    |
-| Secret   | `CLOUDFLARE_ACCOUNT_ID`    | The Cloudflare account the Worker lives in                                                                                        |
-| Variable | `CLOUDFLARE_WORKER_NAME`   | Required. The existing Worker's name: the part of its `workers.dev` address before the first dot                                  |
-| Variable | `PUBLIC_SUPABASE_URL`      | Required. The production Supabase project URL; the API verifies sign-in tokens against it                                         |
-| Variable | `APP_ORIGINS`              | Required. Comma-separated origins allowed to call the API from another origin (the site itself needs none; the Vite dev URL does) |
-| Variable | `LOG_LEVEL`                | Required. An Effect log level literal, case-sensitive: `Info` is the usual choice                                                 |
-| Variable | `CLOUDFLARE_HYPERDRIVE_ID` | The Hyperdrive config the production Worker reaches Postgres through (below). Either this or the `DB_URL` secret                  |
-| Secret   | `DB_URL`                   | Postgres connection string for production when there is no Hyperdrive yet: the Supabase session pooler, port 5432                 |
-| Variable | `SUPABASE_PROJECT_REF`     | Required for previews. The production Supabase project's reference; pull-request previews look their branch up under it           |
-| Secret   | `SUPABASE_ACCESS_TOKEN`    | Required for previews. A Supabase personal access token (Account → Access Tokens) that can read that project's branches           |
-| Variable | `PRODUCTION_URL`           | Optional. The custom domain once there is one; until then the deployment badge links to the `workers.dev` address                 |
+| Kind     | Name                       | Is                                                                                                                                       |
+| -------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Secret   | `CLOUDFLARE_API_TOKEN`     | A Cloudflare API token allowed to edit Workers                                                                                           |
+| Secret   | `CLOUDFLARE_ACCOUNT_ID`    | The Cloudflare account the Worker lives in                                                                                               |
+| Variable | `CLOUDFLARE_WORKER_NAME`   | Required. The existing Worker's name: the part of its `workers.dev` address before the first dot                                         |
+| Variable | `PUBLIC_SUPABASE_URL`      | Required. The production Supabase project URL; the API verifies sign-in tokens against it                                                |
+| Variable | `APP_ORIGINS`              | Required. Comma-separated origins allowed to call the API from another origin (the site itself needs none; the Vite dev URL does)        |
+| Variable | `LOG_LEVEL`                | Required. An Effect log level literal, case-sensitive: `Info` is the usual choice                                                        |
+| Variable | `CLOUDFLARE_HYPERDRIVE_ID` | Optional. The Hyperdrive config the production Worker reaches Postgres through (below)                                                   |
+| Secret   | `DB_URL`                   | Required. Production's Supabase session pooler, port 5432: every deploy migrates through it, and the Worker uses it without a Hyperdrive |
+| Variable | `SUPABASE_PROJECT_REF`     | Required for previews. The production Supabase project's reference; pull-request previews look their branch up under it                  |
+| Secret   | `SUPABASE_ACCESS_TOKEN`    | Required for previews. A Supabase personal access token (Account → Access Tokens) that can read that project's branches                  |
+| Variable | `PRODUCTION_URL`           | Optional. The custom domain once there is one; until then the deployment badge links to the `workers.dev` address                        |
 
-Every push to `main` deploys the site and API. Every pull request gets a preview link posted as a
+Every push to `main` applies the database migrations to production, then deploys the site and API.
+A migration that fails stops the deploy. Every pull request gets a preview link posted as a
 comment; the preview serves both, pointed at the pull request's own Supabase branch and never at
 production. That branch is the one Supabase's GitHub integration creates per git branch: under the
 project's Settings → Integrations → GitHub, connect the repository with the **Working directory**
@@ -89,8 +90,9 @@ wrangler hyperdrive create <name> --connection-string "postgres://postgres.<proj
 ```
 
 Store the printed id as the GitHub variable `CLOUDFLARE_HYPERDRIVE_ID`. Until it exists, the
-`DB_URL` secret does the same job without the connection cache; once it exists, remove that secret
-(`wrangler secret delete DB_URL`), because the Worker prefers the var to the binding.
+`DB_URL` secret does the same job without the connection cache. Once it exists, delete the copy of
+`DB_URL` the earlier deploys gave the Worker (`wrangler secret delete DB_URL`), because the Worker
+prefers it to the binding. Keep the GitHub secret `DB_URL`: deploys still migrate through it.
 
 ## Getting a shell
 

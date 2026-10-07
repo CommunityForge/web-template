@@ -76,7 +76,8 @@ formatter changed fails once; stage the reformatted files and commit again.
 CI mirrors the split. `check.yml` runs `nix flake check` in one job on every pull request and on
 `main`, where it also saves the whole Nix store to the Actions cache that every later Check, Preview
 and Deploy job restores from, so a job builds only what its commit changed. `deploy.yml` runs after
-Check passes on `main` and deploys that same commit.
+Check passes on `main` and, on that same commit, migrates the production database (then audits it)
+and deploys; a failed migration or audit stops the deploy.
 
 ## Layout
 
