@@ -400,9 +400,11 @@ The whole cycle, with the stage names `bin/align-probe.sh` emits under each phas
 
 The archive rides in the change's pull request: `/UpdateDocs` archives on the change's branch,
 commits and pushes, so `main`'s specs and code always land together. Merging is the person's click
-on GitHub, never done from a chat. `/Align` is the fourth local alias, the one onboarding teaches
-for "I'm lost": it runs the probe, names the single situation the person is in, and hands them one
-next step; its rows live in `.claude/skills/Align/SKILL.md`.
+on GitHub, never done from a chat. `/Verify` aliases `/opsx:verify`: an advisory report on whether
+the built change matches its plan, run between testing and `/UpdateDocs`. It is optional and not a
+stage, so the fresh-chat guard ignores it. `/Align` is the local alias onboarding teaches for "I'm
+lost": it runs the probe, names the single situation the person is in, and hands them one next
+step; its rows live in `.claude/skills/Align/SKILL.md`.
 
 `docs/context/` holds reference for epistemic alignment (how the work is done today, terms of the
 trade, forms, rules, examples of good output). Discovery consults its `README.md` index and opens
@@ -412,7 +414,9 @@ file by dropping it in and nothing more: discovery and `/Align` (from the probe'
 mentioned to the person.
 
 The `.claude/commands/opsx/*.md` commands and `.claude/skills/openspec-*` skills are vendored —
-`openspec update` regenerates them, so never edit them. Local behavior (the lay-facing phase
-endings, the fresh-chat rule, the preview link `/WriteCode` ends with) layers on top instead, in the
-`/DefineFeature`, `/WriteCode` and `/UpdateDocs` alias commands, the hooks, and the Guided output
-style.
+`openspec update` regenerates them, so never edit them. The update also REMOVES every vendored
+workflow the machine's OpenSpec profile deselects, and `verify` is outside the core profile: add it
+with `openspec config profile` before running an update, or the update deletes `/opsx:verify` and
+its skill. Local behavior (the lay-facing phase endings, the fresh-chat rule, the preview link
+`/WriteCode` ends with) layers on top instead, in the `/DefineFeature`, `/WriteCode`, `/Verify` and
+`/UpdateDocs` alias commands, the hooks, and the Guided output style.
