@@ -11,10 +11,12 @@
  * Workers socket opened in one request may not be used by another, so the database layer is the one layer never
  * memoized across requests; auth, logger and handlers are built once per isolate.
  *
- * Configuration is the Worker `env`, read through a `ConfigProvider` the layers consult as they build. `DB_URL` wins
- * over the `HYPERDRIVE` binding ON PURPOSE: a preview version inherits the production config, binding included, and the
- * var is what points a preview at a database of its own. A missing value fails the first request with a `ConfigError`
- * naming it: the Worker's form of refusing to start.
+ * Configuration is the Worker `env`, read through a `ConfigProvider` the layers consult as they build. The `HYPERDRIVE`
+ * binding is the database whenever it is bound, and `DB_URL` is the database only when it is not, ON PURPOSE: an upload
+ * never drops a secret, so a production version can carry a `DB_URL` that a preview version left behind, and the
+ * binding is what keeps production on its own database regardless. A preview binds no Hyperdrive, so its `DB_URL` is
+ * its whole database. A missing value fails the first request with a `ConfigError` naming it: the Worker's form of
+ * refusing to start.
  *
  * @since 0.0.0
  */
@@ -54,14 +56,15 @@ const fromHyperdrive = (env: object): ConfigProvider.ConfigProvider =>
     : ConfigProvider.fromUnknown({})
 
 /**
- * The Worker's `env` as the layers' `ConfigProvider`: the vars themselves first, the Hyperdrive binding as the fallback
- * for `DB_URL`.
+ * The Worker's `env` as the layers' `ConfigProvider`: the Hyperdrive binding first, answering `DB_URL` alone and only
+ * when bound, and the vars themselves behind it for everything else, `DB_URL` included when there is no binding. A
+ * `DB_URL` beside a binding is ignored ON PURPOSE: it is what a preview version leaves behind, never production's.
  *
  * @since 0.0.0
  * @category config
  */
 export const configProvider = (env: object): ConfigProvider.ConfigProvider =>
-  ConfigProvider.orElse(ConfigProvider.fromUnknown(env), fromHyperdrive(env))
+  ConfigProvider.orElse(fromHyperdrive(env), ConfigProvider.fromUnknown(env))
 
 /**
  * The app layer for one `env`. Everything a request must see (the log level, the config provider, the auth middleware,

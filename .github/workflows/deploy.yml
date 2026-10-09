@@ -97,9 +97,10 @@ jobs:
             --var "APP_ORIGINS:$APP_ORIGINS"
             --var "LOG_LEVEL:$LOG_LEVEL"
           )
-          # With a Hyperdrive bound, production carries no DB_URL: the binding is the database, and
-          # the Worker reads the binding's connection string. Without one, DB_URL is the database,
-          # uploaded as a secret rather than a var so it shows in neither the dashboard nor this log.
+          # With a Hyperdrive bound, the deploy uploads no DB_URL: the binding is the database, and
+          # the Worker reads it in preference to any DB_URL secret an earlier preview version left
+          # behind (an upload never drops a secret). Without one, DB_URL is the database, uploaded
+          # as a secret rather than a var so it shows in neither the dashboard nor this log.
           if [ -z "$HYPERDRIVE_ID" ]; then
             jq -n --arg url "$DB_URL" '{ DB_URL: $url }' > "$RUNNER_TEMP/secrets.json"
             args+=(--secrets-file "$RUNNER_TEMP/secrets.json")
@@ -113,3 +114,42 @@ jobs:
             echo "::error::wrangler did not report a deployed URL and PRODUCTION_URL is unset" && exit 1
           fi
           echo "url=$url" >> "$GITHUB_OUTPUT"
+      # The deployed version, read back from Cloudflare. With a Hyperdrive id: exactly one
+      # Hyperdrive binding, named HYPERDRIVE, because the binding is what the Worker reads and
+      # production's database rides on it. No assertion about DB_URL in that case ON PURPOSE: a
+      # DB_URL secret an earlier preview version left behind stays in the version and is ignored.
+      # Without an id: no Hyperdrive binding and the DB_URL secret present, because DB_URL is then
+      # the database.
+      - name: Check the deployed version's shape
+        working-directory: apps/server
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          WRANGLER_OUTPUT: ${{ runner.temp }}/wrangler-output.ndjson
+          CONFIG: ${{ steps.config.outputs.path }}
+          WORKER_NAME: ${{ vars.CLOUDFLARE_WORKER_NAME }}
+          HYPERDRIVE_ID: ${{ vars.CLOUDFLARE_HYPERDRIVE_ID }}
+        run: |
+          id=$(jq -r 'select(.type == "deploy") | .version_id // empty' "$WRANGLER_OUTPUT")
+          if [ -z "$id" ]; then
+            echo "::error::wrangler did not report the deployed version's id" && exit 1
+          fi
+          nix run --inputs-from "$GITHUB_WORKSPACE" nixpkgs#wrangler -- versions view "$id" \
+            --config "$CONFIG" --name "$WORKER_NAME" --json > "$RUNNER_TEMP/version.json"
+          if [ -n "$HYPERDRIVE_ID" ]; then
+            if ! jq -e '[.resources.bindings[] | select(.type == "hyperdrive")] | length == 1 and .[0].name == "HYPERDRIVE"' "$RUNNER_TEMP/version.json" > /dev/null; then
+              echo "::error::Deployed version $id of $WORKER_NAME does not bind exactly one Hyperdrive named HYPERDRIVE, so the Worker is not reading production's database through CLOUDFLARE_HYPERDRIVE_ID. Check the generated wrangler config."
+              exit 1
+            fi
+            echo "Deployed version $id binds HYPERDRIVE"
+          else
+            if ! jq -e '[.resources.bindings[] | select(.type == "hyperdrive")] | length == 0' "$RUNNER_TEMP/version.json" > /dev/null; then
+              echo "::error::Deployed version $id of $WORKER_NAME carries a Hyperdrive binding although CLOUDFLARE_HYPERDRIVE_ID is unset. Check the generated wrangler config."
+              exit 1
+            fi
+            if ! jq -e '[.resources.bindings[] | select(.type == "secret_text" and .name == "DB_URL")] | length == 1' "$RUNNER_TEMP/version.json" > /dev/null; then
+              echo "::error::Deployed version $id of $WORKER_NAME carries no DB_URL secret and binds no Hyperdrive, so it has no database. The deploy must pass DB_URL with --secrets-file when CLOUDFLARE_HYPERDRIVE_ID is unset."
+              exit 1
+            fi
+            echo "Deployed version $id binds no Hyperdrive and carries its DB_URL secret"
+          fi

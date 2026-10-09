@@ -81,7 +81,7 @@ describe("Worker", () => {
     ),
   )
 
-  it.effect("the Hyperdrive binding stands in for a missing DB_URL", () =>
+  it.effect("DB_URL resolves to the Hyperdrive binding when only the binding is bound", () =>
     Effect.gen(function* () {
       const provider = Worker.configProvider({
         HYPERDRIVE: { connectionString: "postgres://hyperdrive.test/postgres" },
@@ -91,14 +91,33 @@ describe("Worker", () => {
     }),
   )
 
-  it.effect("DB_URL wins over the Hyperdrive binding", () =>
+  it.effect("DB_URL resolves to the var when only the var is set", () =>
+    Effect.gen(function* () {
+      const provider = Worker.configProvider({ DB_URL: "postgres://branch.test/postgres" })
+      const node = yield* provider.load(["DB_URL"])
+      strictEqual(node?._tag === "Value" ? node.value : undefined, "postgres://branch.test/postgres")
+    }),
+  )
+
+  it.effect("the Hyperdrive binding wins over DB_URL when both are present", () =>
     Effect.gen(function* () {
       const provider = Worker.configProvider({
         DB_URL: "postgres://branch.test/postgres",
         HYPERDRIVE: { connectionString: "postgres://hyperdrive.test/postgres" },
       })
       const node = yield* provider.load(["DB_URL"])
-      strictEqual(node?._tag === "Value" ? node.value : undefined, "postgres://branch.test/postgres")
+      strictEqual(node?._tag === "Value" ? node.value : undefined, "postgres://hyperdrive.test/postgres")
+    }),
+  )
+
+  it.effect("the Hyperdrive binding answers DB_URL alone, never another key", () =>
+    Effect.gen(function* () {
+      const provider = Worker.configProvider({
+        LOG_LEVEL: "Warn",
+        HYPERDRIVE: { connectionString: "postgres://hyperdrive.test/postgres" },
+      })
+      const node = yield* provider.load(["LOG_LEVEL"])
+      strictEqual(node?._tag === "Value" ? node.value : undefined, "Warn")
     }),
   )
 
