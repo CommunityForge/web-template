@@ -8,14 +8,20 @@
  * @since 0.0.0
  */
 
+import type * as HttpServerResponse from "effect/unstable/http/HttpServerResponse"
+
 import * as Api from "@replaceme/domain/Api"
 import * as Config from "effect/Config"
+import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
+import * as Option from "effect/Option"
 import * as References from "effect/References"
 import * as Schema from "effect/Schema"
 import * as HttpMiddleware from "effect/unstable/http/HttpMiddleware"
 import * as HttpRouter from "effect/unstable/http/HttpRouter"
+import * as HttpServerError from "effect/unstable/http/HttpServerError"
+import * as HttpServerRequest from "effect/unstable/http/HttpServerRequest"
 import * as HttpApiBuilder from "effect/unstable/httpapi/HttpApiBuilder"
 import * as HttpApiSwagger from "effect/unstable/httpapi/HttpApiSwagger"
 
@@ -63,9 +69,64 @@ export const CorsLive = HttpRouter.middleware(
 )
 
 /**
- * The API the domain declares, with every group's handlers provided, CORS around every route, the OpenAPI document at
- * `/api/openapi.json` and Swagger at `/api/docs`. The two documents sit beside the contract's `/api` prefix rather than
- * under it: the builder mounts them on the router directly, so the prefix is spelled here.
+ * The path of a request without its query and fragment, for a log line. A query can carry what a log aggregator should
+ * not hold, so only the path is annotated.
+ */
+const pathOf = (request: HttpServerRequest.HttpServerRequest): string =>
+  new URL(request.url, "http://localhost").pathname
+
+/**
+ * Logs the cause behind every response of status 500 or above, at Error level, annotated with the method, the path and
+ * the status. Below 500 nothing is logged: a client error is the client's to read in its response. The response itself
+ * is left exactly as the platform derives it, an empty body and never the cause.
+ *
+ * Error level ON PURPOSE: the platform's own request log is Info, so under the `Warn` a deployment runs at a dying
+ * handler would otherwise leave no trace. The status is the one the platform will send, derived here the same way, so a
+ * failure that chooses its own 4xx response is passed over and a bare defect is counted as the 500 it becomes.
+ *
+ * @since 0.0.0
+ * @category middleware
+ */
+export const logFailures: <E, R>(
+  app: Effect.Effect<HttpServerResponse.HttpServerResponse, E, HttpServerRequest.HttpServerRequest | R>,
+) => Effect.Effect<HttpServerResponse.HttpServerResponse, E, HttpServerRequest.HttpServerRequest | R> =
+  HttpMiddleware.make((app) =>
+    Effect.withFiber((fiber) => {
+      const request = Context.getUnsafe(fiber.context, HttpServerRequest.HttpServerRequest)
+      return Effect.flatMap(Effect.exit(app), (exit) => {
+        if (exit._tag === "Success") {
+          return exit
+        }
+        const [, cause] = HttpServerError.causeResponseStripped(exit.cause)
+        return Effect.flatMap(HttpServerError.causeResponse(exit.cause), ([response]) =>
+          response.status < 500 || Option.isNone(cause)
+            ? exit
+            : Effect.andThen(
+                Effect.annotateLogs(Effect.logError("Request failed", cause.value), {
+                  "http.method": request.method,
+                  "http.url": pathOf(request),
+                  "http.status": response.status,
+                }),
+                exit,
+              ),
+        )
+      })
+    }),
+  )
+
+/**
+ * `logFailures` installed on the router as GLOBAL middleware, so a failure in any route is logged whichever entry point
+ * serves it.
+ *
+ * @since 0.0.0
+ * @category layers
+ */
+export const FailureLogLive = HttpRouter.middleware(logFailures, { global: true })
+
+/**
+ * The API the domain declares, with every group's handlers provided, CORS and failure logging around every route, the
+ * OpenAPI document at `/api/openapi.json` and Swagger at `/api/docs`. The two documents sit beside the contract's
+ * `/api` prefix rather than under it: the builder mounts them on the router directly, so the prefix is spelled here.
  *
  * Coverage is type-checked: `HttpApiBuilder.layer(Api.Http)` requires the handler service of every group in the
  * `HttpApi`, so a group added to the contract and not provided here is an unsatisfied requirement `tsc -b` reports.
@@ -81,4 +142,5 @@ export const ApiLive = Layer.mergeAll(
     Layer.provide(HttpApiSwagger.layer(Api.Http, { path: "/api/docs" })),
   ),
   CorsLive,
+  FailureLogLive,
 )

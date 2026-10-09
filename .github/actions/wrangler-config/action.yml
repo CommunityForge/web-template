@@ -9,7 +9,7 @@ inputs:
     description: The directory holding `wrangler.json`; the generated file is written beside it so its relative paths keep resolving
     required: true
   hyperdrive-id:
-    description: The Hyperdrive config id to bind as `HYPERDRIVE`; empty binds nothing and the Worker falls back to its `DB_URL` var
+    description: The Hyperdrive config id to bind as `HYPERDRIVE`, which the Worker reads in preference to `DB_URL`; empty binds nothing and the Worker reads its `DB_URL` instead
     required: false
     default: ""
 

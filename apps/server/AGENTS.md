@@ -6,16 +6,16 @@ beside the SPA. It owns no wire shape, no endpoint definition, no error class an
 the **`TokenVerifier`** implementation that turns a bearer token into a principal, and the **Worker** that is the
 production deployment. Nothing here is exported for another package to import.
 
-| Module                 | Owns                                                                                    |
-| ---------------------- | --------------------------------------------------------------------------------------- |
-| `Http.ts`              | The portable root: `ApiLive` with every group and `CorsLive`, and `LoggerLive`          |
-| `Node.ts`              | `HttpLive`: the portable root bound to a `NodeHttpServer` on `API_PORT`                 |
-| `main.ts`              | `Layer.launch(Node.HttpLive)` under `NodeRuntime.runMain`                               |
-| `Worker.ts`            | `SqlRequestLive`, `configProvider(env)`, `AppLive(env)`, and `export default { fetch }` |
-| `Auth.ts`              | `AuthLive`: the auth middleware over a Supabase-bound `TokenVerifier`                   |
-| `JwksTokenVerifier.ts` | `TokenVerifier` over a remote JWKS: issuer, audience, algorithms all required           |
-| `Sql.ts`               | Re-export of `@replaceme/db`'s `PgLive` and `PgUrlLive`, so every feature names one     |
-| `TopLevel/Http.ts`     | `/api/health`                                                                           |
+| Module                 | Owns                                                                                         |
+| ---------------------- | -------------------------------------------------------------------------------------------- |
+| `Http.ts`              | The portable root: `ApiLive` with every group, `CorsLive` and `FailureLogLive`; `LoggerLive` |
+| `Node.ts`              | `HttpLive`: the portable root bound to a `NodeHttpServer` on `API_PORT`                      |
+| `main.ts`              | `Layer.launch(Node.HttpLive)` under `NodeRuntime.runMain`                                    |
+| `Worker.ts`            | `SqlRequestLive`, `configProvider(env)`, `AppLive(env)`, and `export default { fetch }`      |
+| `Auth.ts`              | `AuthLive`: the auth middleware over a Supabase-bound `TokenVerifier`                        |
+| `JwksTokenVerifier.ts` | `TokenVerifier` over a remote JWKS: issuer, audience, algorithms all required                |
+| `Sql.ts`               | Re-export of `@replaceme/db`'s `PgLive` and `PgUrlLive`, so every feature names one          |
+| `TopLevel/Http.ts`     | `/api/health`                                                                                |
 
 ## Two entry points over one portable core
 
@@ -52,8 +52,15 @@ Http.ApiLive
       HttpApiBuilder.layer(Api.Http, { openapiPath: "/api/openapi.json" })
         |> Layer.provide(<one GroupLive per group>)
         |> Layer.provide(HttpApiSwagger.layer(Api.Http, { path: "/api/docs" })),
-      CorsLive)                                          -- HttpRouter.middleware(cors(APP_ORIGINS), { global: true })
+      CorsLive,                                          -- HttpRouter.middleware(cors(APP_ORIGINS), { global: true })
+      FailureLogLive)                                    -- HttpRouter.middleware(logFailures, { global: true })
 ```
+
+`FailureLogLive` is why a dying handler is diagnosable in production. The platform's own request log is Info, so under
+the `Warn` a deployment runs at a 500 leaves no line; `logFailures` logs the cause behind every response of status 500
+or above at Error, annotated with `http.method`, `http.url` (the path, never the query) and `http.status`, and passes
+the exit through untouched. The status is derived the way the platform derives it, so a failure that chooses its own
+4xx response is passed over. The response body stays empty: the cause is logged, never returned.
 
 The Worker MERGES what the Node root merely provides. Request fibers in a web handler run under the app layer's
 built context and nothing else, so a service that must be visible at request time (the log level, the config
@@ -81,16 +88,20 @@ client has nothing to listen on past its request.
 
 ### `env` is a `ConfigProvider`
 
-No layer takes `env`. `configProvider(env)` is `ConfigProvider.fromUnknown(env)` with a fallback provider behind it
-that answers `DB_URL` from the `HYPERDRIVE` binding's `connectionString`, and `AppLive(env)` merges it in as the
-ambient provider. The layers then read `PUBLIC_SUPABASE_URL`, `LOG_LEVEL`, `APP_ORIGINS` and `DB_URL` exactly as they
-do under Node, and a missing one fails the first request with a `ConfigError` naming it: the Worker's form of the
-"no defaults" rule. The fallback reads the binding by property access, not by walking `env`: the binding is a
-platform object whose fields are not own keys.
+No layer takes `env`. `configProvider(env)` is a provider that answers `DB_URL` from the `HYPERDRIVE` binding's
+`connectionString` when the binding is bound, with `ConfigProvider.fromUnknown(env)` behind it for every other key
+(and for `DB_URL` when there is no binding), and `AppLive(env)` merges it in as the ambient provider. The layers then
+read `PUBLIC_SUPABASE_URL`, `LOG_LEVEL`, `APP_ORIGINS` and `DB_URL` exactly as they do under Node, and a missing one
+fails the first request with a `ConfigError` naming it: the Worker's form of the "no defaults" rule. The binding is
+read by property access, not by walking `env`: it is a platform object whose fields are not own keys.
 
-`DB_URL` resolves var-first: the var when present, else the binding's `connectionString`. Var first is ON PURPOSE. A
-preview version inherits the production config, Hyperdrive binding included, so the var is what points a preview at
-a database of its own. With neither, every request fails with a `ConfigError` naming `DB_URL`.
+`DB_URL` resolves binding-first: the binding's `connectionString` when bound, else the `DB_URL` var or secret. Binding
+first is ON PURPOSE. Every upload keeps the secrets of the version before it, so a production version deployed after
+a preview upload carries the preview's `DB_URL` secret, pointed at a Supabase branch that is deleted once the pull
+request closes; the binding, which only production's config declares, is what keeps production on its own database.
+A preview version binds no Hyperdrive, so its `DB_URL` is its whole database. The two workflows read every uploaded
+version back and fail when its shape is not the one this precedence assumes. With neither, every request fails with a
+`ConfigError` naming `DB_URL`.
 
 The handler is created once per isolate, on the first `fetch`: `make` is memoized on the `env` object with
 `Function.memoize`. `env` is fixed for an isolate's life, so the identity key is exact, and there is no module-level
@@ -180,18 +191,18 @@ do not move. Whether an anonymous principal may use a route is decided against t
 
 Every value comes from the ambient `ConfigProvider`, with no default anywhere in `src`. The launcher names each one:
 `server-dev` and `server-worker-dev` in `server.nix` for development, the GitHub workflows for the deployed Worker, the
-NixOS module for a Node host. In the Worker the ambient provider is `configProvider(env)`, `ConfigProvider.fromUnknown`
-over the bindings with the Hyperdrive fallback behind it; no layer takes `env` as an argument.
+NixOS module for a Node host. In the Worker the ambient provider is `configProvider(env)`, the Hyperdrive binding for
+`DB_URL` when bound and `ConfigProvider.fromUnknown` over the bindings behind it; no layer takes `env` as an argument.
 
-| Variable              | Read by     | Meaning                                                          |
-| --------------------- | ----------- | ---------------------------------------------------------------- |
-| `API_PORT`            | `Node.ts`   | HTTP listen port; Node only                                      |
-| `LOG_LEVEL`           | `Http.ts`   | An Effect `LogLevel` literal, case-sensitive                     |
-| `APP_ORIGINS`         | `Http.ts`   | Comma-separated CORS allow-list; nothing else passes             |
-| `PUBLIC_SUPABASE_URL` | `Auth.ts`   | Provider base URL; issuer and JWKS derive from it                |
-| `DB_*` (five)         | `db`'s `Pg` | Postgres for the Node root, once a feature needs `Sql.PgLive`    |
-| `DB_URL`              | `db`'s `Pg` | Postgres for the Worker, one string; var-first over `HYPERDRIVE` |
-| `HYPERDRIVE`          | `Worker.ts` | The Hyperdrive binding; its `connectionString` becomes `DB_URL`  |
+| Variable              | Read by     | Meaning                                                                |
+| --------------------- | ----------- | ---------------------------------------------------------------------- |
+| `API_PORT`            | `Node.ts`   | HTTP listen port; Node only                                            |
+| `LOG_LEVEL`           | `Http.ts`   | An Effect `LogLevel` literal, case-sensitive                           |
+| `APP_ORIGINS`         | `Http.ts`   | Comma-separated CORS allow-list; nothing else passes                   |
+| `PUBLIC_SUPABASE_URL` | `Auth.ts`   | Provider base URL; issuer and JWKS derive from it                      |
+| `DB_*` (five)         | `db`'s `Pg` | Postgres for the Node root, once a feature needs `Sql.PgLive`          |
+| `DB_URL`              | `db`'s `Pg` | Postgres for the Worker, one string; read only without `HYPERDRIVE`    |
+| `HYPERDRIVE`          | `Worker.ts` | The Hyperdrive binding; when bound, its `connectionString` is `DB_URL` |
 
 CORS is pinned because authenticated endpoints take a bearer token: an unrestricted policy would let any page drive
 them with a token it managed to read. In production the SPA and the API share one origin, so the policy only ever
@@ -228,8 +239,10 @@ them. `wrangler.json` beside this file is its config, and this unit owns it.
 ### Hyperdrive, and why its origin is the session pooler
 
 Production binds one Hyperdrive; the preview workflow binds none, so a preview version's only database is the `DB_URL`
-version secret it is uploaded with and there is no binding for it to fall through to. The one-time `wrangler hyperdrive
-create` is in the README.
+version secret it is uploaded with. Bindings are never inherited between versions, only secrets are: a preview never
+sees production's binding, and production reads its binding past whatever `DB_URL` secret the last preview upload left
+in the Worker. Each workflow reads the version it uploaded back and fails on any other shape. The one-time
+`wrangler hyperdrive create` is in the README.
 
 The Hyperdrive's origin is Supabase's **session pooler on port 5432**, not the direct connection. Supabase's direct
 host is IPv6-only without the paid IPv4 add-on and Hyperdrive's IPv6 reach is undocumented; the session pooler is
@@ -267,6 +280,11 @@ authenticated one adds `AuthMiddleware.layer` over a `Layer.succeed` `TokenVerif
 `packages/domain/test/AuthMiddleware.test.ts` does. Test files mirror `src` file for file under `test/`.
 
 `test/Worker.test.ts` builds the web handler from a fake env record and drives it with plain `Request`s: `/api/health`,
-`/api/docs`, `/api/openapi.json`, CORS against a two-origin allow-list, the `DB_URL`-over-`HYPERDRIVE` precedence
-through `configProvider`, and a record missing `PUBLIC_SUPABASE_URL`, whose first request fails with a `ConfigError`.
-No database is needed because no route queries one; the `DB_URL` in the fake env is never connected to.
+`/api/docs`, `/api/openapi.json`, CORS against a two-origin allow-list, the `HYPERDRIVE`-over-`DB_URL` precedence
+through `configProvider` (binding only, var only, both), and a record missing `PUBLIC_SUPABASE_URL`, whose first
+request fails with a `ConfigError`. No database is needed because no route queries one; the `DB_URL` in the fake env is
+never connected to.
+
+`test/Http.test.ts` runs `logFailures` over hand-built apps under a capturing logger and the `Warn` minimum level: a
+dying app writes exactly one Error line with the cause and the request annotations, a failure that chooses a 4xx
+response and a success write nothing, and the exit comes through unchanged.

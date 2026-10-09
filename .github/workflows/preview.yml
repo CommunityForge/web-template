@@ -137,9 +137,10 @@ jobs:
           # runs. Migrate, then audit, from the bundled operator programs: no workspace is installed
           # on this runner.
           nix run "$GITHUB_WORKSPACE#db-migrator"
-      # No `hyperdrive-id` ON PURPOSE: a version uploaded with the production binding would carry
-      # a route to production data that only the Worker's var-first precedence keeps closed.
-      # Without it, the branch's DB_URL is the preview's only database.
+      # No `hyperdrive-id` ON PURPOSE: the Worker reads the Hyperdrive binding whenever one is
+      # bound, so a preview version must carry none, or it would read production's database and
+      # ignore the branch's DB_URL. Without the binding, the branch's DB_URL is the preview's only
+      # database. The check after the upload holds the version to that shape.
       - name: Wrangler config
         id: config
         uses: ./.github/actions/wrangler-config
@@ -187,6 +188,34 @@ jobs:
             echo "::error::wrangler did not report a preview URL" && exit 1
           fi
           echo "url=$url" >> "$GITHUB_OUTPUT"
+      # The uploaded version, read back from Cloudflare: no Hyperdrive binding, because the Worker
+      # would read it in preference to DB_URL and the preview would reach production's data; and
+      # the DB_URL secret present, because without it the preview has no database at all. A link
+      # is posted only once both hold.
+      - name: Check the preview version's shape
+        working-directory: apps/server
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          WRANGLER_OUTPUT: ${{ runner.temp }}/wrangler-output.ndjson
+          CONFIG: ${{ steps.config.outputs.path }}
+          WORKER_NAME: ${{ vars.CLOUDFLARE_WORKER_NAME }}
+        run: |
+          id=$(jq -r 'select(.type == "version-upload") | .version_id // empty' "$WRANGLER_OUTPUT")
+          if [ -z "$id" ]; then
+            echo "::error::wrangler did not report the uploaded version's id" && exit 1
+          fi
+          nix run --inputs-from "$GITHUB_WORKSPACE" nixpkgs#wrangler -- versions view "$id" \
+            --config "$CONFIG" --name "$WORKER_NAME" --json > "$RUNNER_TEMP/version.json"
+          if ! jq -e '[.resources.bindings[] | select(.type == "hyperdrive")] | length == 0' "$RUNNER_TEMP/version.json" > /dev/null; then
+            echo "::error::Preview version $id of $WORKER_NAME carries a Hyperdrive binding, which the Worker would read in preference to the branch's DB_URL. The preview workflow must generate its wrangler config without a hyperdrive-id."
+            exit 1
+          fi
+          if ! jq -e '[.resources.bindings[] | select(.type == "secret_text" and .name == "DB_URL")] | length == 1' "$RUNNER_TEMP/version.json" > /dev/null; then
+            echo "::error::Preview version $id of $WORKER_NAME carries no DB_URL secret, so it has no database. The upload must pass the branch's connection string with --secrets-file."
+            exit 1
+          fi
+          echo "Preview version $id binds no Hyperdrive and carries its DB_URL secret"
       - name: Comment on the pull request
         env:
           GH_TOKEN: ${{ github.token }}

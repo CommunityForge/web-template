@@ -122,9 +122,10 @@ wrangler hyperdrive create <name> --connection-string "postgres://postgres.<proj
 ```
 
 Store the printed id as the GitHub variable `CLOUDFLARE_HYPERDRIVE_ID`. Until it exists, the
-`DB_URL` secret does the same job without the connection cache. Once it exists, delete the copy of
-`DB_URL` the earlier deploys gave the Worker (`wrangler secret delete DB_URL`), because the Worker
-prefers it to the binding. Keep the GitHub secret `DB_URL`: deploys still migrate through it.
+`DB_URL` secret does the same job without the connection cache. Once it exists, the Worker reads the
+Hyperdrive and ignores any `DB_URL` secret still on it, whether from earlier deploys or from a
+pull-request preview; nothing needs deleting. Keep the GitHub secret `DB_URL`: deploys still
+migrate through it.
 
 Hyperdrive checks its credentials only when it is created or updated, and nothing exercises them
 until a route queries the database. `wrangler hyperdrive get <id>` shows the host and user it holds;
