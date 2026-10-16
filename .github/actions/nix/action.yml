@@ -22,7 +22,7 @@ runs:
     # tracking the installer's latest release. `keep-outputs` and `keep-derivations` make the
     # garbage collector that runs before a save keep the build closure (pnpm snapshots, the node
     # toolchain) of every rooted output, not just the outputs themselves.
-    - uses: DeterminateSystems/determinate-nix-action@8d87e8d5e5b8a8309d4281094560f127d9a265f1 # v3.22.5
+    - uses: DeterminateSystems/determinate-nix-action@e847f25223456b3058e12f7fc9d777b6a6f25060 # v3.23.2
       if: ${{ !env.ACT }}
       with:
         extra-conf: |
