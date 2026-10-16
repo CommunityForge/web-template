@@ -405,7 +405,11 @@ on GitHub, never done from a chat. `/Verify` aliases `/opsx:verify`: an advisory
 the built change matches its plan, run between testing and `/UpdateDocs`. It is optional and not a
 stage, so the fresh-chat guard ignores it. `/Align` is the local alias onboarding teaches for "I'm
 lost": it runs the probe, names the single situation the person is in, and hands them one next
-step; its rows live in `.claude/skills/Align/SKILL.md`.
+step; its rows live in `.claude/skills/Align/SKILL.md`. `/DescribeProblem` is the step before the
+cycle: `/opsx:explore` with its stance replaced by the role in
+`.claude/prompts/describe-problem.md`, reading the same specs and context docs, writing nothing,
+and ending by pointing at `/DefineFeature` in the same chat. The role file is the swappable part;
+a different guide goes there and the command stays.
 
 `docs/context/` holds reference for epistemic alignment (how the work is done today, terms of the
 trade, forms, rules, examples of good output). Discovery consults its `README.md` index and opens
