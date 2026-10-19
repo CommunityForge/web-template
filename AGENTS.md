@@ -46,12 +46,13 @@ pnpm, oxlint, oxfmt, tsgolint and typos all come from Nix rather than npm, so th
 truth for tool versions and no native postinstall to run inside the build sandbox. Consequently
 there is no `packageManager` field and no `.nvmrc`.
 
-| Command                   | What it does                                                                                 |
-| ------------------------- | -------------------------------------------------------------------------------------------- |
-| `nix flake check`         | Every check: `formatting`, `spellcheck`, `actionlint`, `psparse`, and a build of every unit  |
-| `bin/align-probe.sh`      | Read-only `key=value` facts about where the project stands; what `/Align` reasons from       |
-| `bin/test-align-probe.sh` | The probe's fixture suite: throwaway repos and a fake `gh`, run by hand like `test-hooks.sh` |
-| `nix build .#<unit>`      | Reproducible build of one unit; its `checkPhase` re-runs check/test/lint                     |
+| Command                    | What it does                                                                                 |
+| -------------------------- | -------------------------------------------------------------------------------------------- |
+| `nix flake check`          | Every check: `formatting`, `spellcheck`, `actionlint`, `psparse`, and a build of every unit  |
+| `bin/align-probe.sh`       | Read-only `key=value` facts about where the project stands; what `/Align` reasons from       |
+| `bin/test-align-probe.sh`  | The probe's fixture suite: throwaway repos and a fake `gh`, run by hand like `test-hooks.sh` |
+| `bin/test-session-sync.sh` | The new-chat sync hook's fixture suite: throwaway repos with a local "GitHub", run by hand   |
+| `nix build .#<unit>`       | Reproducible build of one unit; its `checkPhase` re-runs check/test/lint                     |
 
 ### Formatting
 
@@ -338,6 +339,12 @@ Because `./.claude` can be `CLAUDE_CONFIG_DIR`, it mixes tracked project config 
 `commands/`, `agents/`, `skills/` and `output-styles/`, so credentials and session history stay out
 of git while a clone still gets the workflow boundary. Add a re-include when you add a new config
 directory there.
+
+`.claude/hooks/session-sync.sh` brings a local copy up to date with GitHub's `main` at the start of
+every new chat (never a resumed one, never a cloud session): it fast-forwards `main` when `main` is
+only behind, and moves off a change branch that GitHub has already merged and filed onto `main`.
+Anything else it leaves alone, silently; the next new chat retries. It is a hook rather than a model
+step ON PURPOSE, and its header says why; read it before changing what makes it move.
 
 ## Agents in a sandboxed client
 
