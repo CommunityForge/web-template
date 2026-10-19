@@ -152,11 +152,14 @@ let
             # `--force`, which pulls EVERY platform's optional binaries (AIX, FreeBSD, Windows, ...)
             # and roughly doubles the snapshot. The lists are explicit rather than "current" ON
             # PURPOSE: the fixed-output hash must not depend on which system ran the fetch.
+            # `libc` names BOTH families because pnpm skips the libc filter entirely where it
+            # cannot detect one (every darwin host), so a glibc-only list fetches musl binaries
+            # on darwin and not on Linux, and the two hashes diverge.
             ${pkgs.yq-go}/bin/yq -i '
               .supportedArchitectures = {
                 "os": ["linux", "darwin"],
                 "cpu": ["x64", "arm64"],
-                "libc": ["glibc"]
+                "libc": ["glibc", "musl"]
               }
             ' pnpm-workspace.yaml
 
