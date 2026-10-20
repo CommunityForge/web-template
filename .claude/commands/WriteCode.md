@@ -34,17 +34,23 @@ do this before writing the completion output:
 change/schema/progress header and the per-task checklist; the checklist already lives on disk
 in `tasks.md`) with a plain-language testing handoff:
 
-- "Ready for you to test." plus one line on what is different now, in terms of what the person
-  can do or see.
-- The preview link on its own line, followed by the pull request link. The preview is where
-  they test; the pull request is where the change is reviewed and merged, and merging is what
+- "Ready for you to test. It's in your app now." plus one line on what is different now, in
+  terms of what the person can do or see. Before writing it, restart the local app
+  (`preview_stop`, then `preview_start {name: "app"}`) when the change touched the database
+  schema, dependencies or Nix files, and confirm the change shows there.
+- What to try first in their app, concretely — name the actual screen, button, or action, drawn
+  from the change's own spec and tasks. Never say "run the tests".
+- The shareable preview link on its own line, for showing someone else, followed by the pull
+  request link. The pull request is where the change is reviewed and merged, and merging is what
   publishes it for real.
-- What to try first, concretely — name the actual screen, button, or action, drawn from the
-  change's own spec and tasks. Never say "run the tests".
 - End with exactly this sentence and nothing after it:
 
   "When you have tested it and everything works the way you expect, use `/UpdateDocs` to file
   this change away."
+
+While Amendment 1's step 4 waits on the Preview workflow, say one line: "Making a shareable link
+too — a few minutes…". A cloud session has no local app: there the shareable preview link leads,
+as the place to test.
 
 The **Output On Pause (Issue Encountered)** behavior is unchanged.
 

@@ -3,6 +3,7 @@ _: {
     { pkgs, buildPnpmPackage, ... }:
     let
       fs = pkgs.lib.fileset;
+      local = import ../../nix/local.nix;
     in
     {
       packages.frontend = buildPnpmPackage {
@@ -51,6 +52,10 @@ _: {
           name = "frontend-dev";
           text = ''
             cd "$(git rev-parse --show-toplevel)/apps/frontend"
+            # `vite.config.ts` has no port of its own: it serves on APP_PORT and proxies `/api` to
+            # API_PORT, where only `nix run .#dev` or `.#server-dev` has an API listening.
+            export APP_PORT="${local.APP_PORT}"
+            export API_PORT="${local.API_PORT}"
             pnpm install
             pnpm run dev
           '';

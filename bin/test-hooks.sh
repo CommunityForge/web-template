@@ -23,6 +23,10 @@ FRESH="${2:-.claude/hooks/fresh-session-guard.sh}"
 
 REMINDER="${3:-.claude/hooks/artifact-reminder.sh}"
 
+CONTEXT="${4:-.claude/hooks/session-context.sh}"
+
+PORTS="${5:-.claude/hooks/app-ports.sh}"
+
 # Lets check() route through an interpreter when the exec bit is missing.
 fresh_guard() { bash "$FRESH"; }
 remote_fresh_guard() { CLAUDE_CODE_REMOTE=true bash "$FRESH"; }
@@ -367,15 +371,62 @@ run_reminder_suite() {
   GUARD="$saved_guard"
 }
 
+run_context_suite() {
+  echo
+  echo "Session context tests ($1)"
+  echo "-----------------------"
+
+  # expect "yes" when the context must open with the LOCAL APP paragraph,
+  # "no" when it must not. Either way the output must parse as JSON.
+  context_check() {
+    local name="$1" remote="$2" expect="$3" got
+    got="$(CLAUDE_CODE_REMOTE="$remote" bash "$CONTEXT" 2>/dev/null |
+      node -e 'const c = JSON.parse(require("fs").readFileSync(0, "utf8")).hookSpecificOutput.additionalContext; console.log(c.startsWith("LOCAL APP:") ? "yes" : "no")' 2>/dev/null)"
+    if [ "$got" = "$expect" ]; then
+      printf '  \033[32mPASS\033[0m  %s\n' "$name"
+      PASS=$((PASS + 1))
+    else
+      printf '  \033[31mFAIL\033[0m  %s (expected %s, got %s)\n' "$name" "$expect" "${got:-invalid JSON}"
+      FAIL=$((FAIL + 1))
+    fi
+  }
+
+  context_check "desktop session opens the local app" "" yes
+  context_check "cloud session has no local app" true no
+
+  # app-ports.sh prints nothing and exits 0 on every path; whether it frees
+  # the port needs a client outside the sandbox and a new chat, so the stop
+  # itself is not exercised here.
+  ports_check() {
+    local name="$1" remote="$2" payload="$3" out rc
+    out="$(printf '%s' "$payload" | CLAUDE_CODE_REMOTE="$remote" CLAUDE_PROJECT_DIR="$PWD" bash "$PORTS" 2>&1)"
+    rc=$?
+    if [ "$rc" -eq 0 ] && [ -z "$out" ]; then
+      printf '  \033[32mPASS\033[0m  %s\n' "$name"
+      PASS=$((PASS + 1))
+    else
+      printf '  \033[31mFAIL\033[0m  %s (rc=%s, output: %s)\n' "$name" "$rc" "$out"
+      FAIL=$((FAIL + 1))
+    fi
+  }
+
+  ports_check "app ports: new chat stays silent" "" '{"hook_event_name":"SessionStart","source":"startup"}'
+  ports_check "app ports: resume stays silent" "" '{"hook_event_name":"SessionStart","source":"resume"}'
+  ports_check "app ports: cloud stays silent" true '{"hook_event_name":"SessionStart","source":"startup"}'
+  ports_check "app ports: unparsable payload stays silent" "" 'not json at all'
+}
+
 run_suite "host PATH"
 run_fresh_suite "host PATH"
 run_reminder_suite "host PATH"
+run_context_suite "host PATH"
 
 if [ -d "$PWD/.devshell/bin" ]; then
   export CLAUDE_PROJECT_DIR="$PWD"
   run_suite "pinned toolchain via .devshell"
   run_fresh_suite "pinned toolchain via .devshell"
   run_reminder_suite "pinned toolchain via .devshell"
+  run_context_suite "pinned toolchain via .devshell"
 else
   echo
   echo "  (no .devshell out-link; pinned-toolchain pass skipped)"

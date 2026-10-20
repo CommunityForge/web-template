@@ -9,18 +9,7 @@
     }:
     let
       fs = pkgs.lib.fileset;
-      PUBLIC_SUPABASE_URL = "http://127.0.0.1:54321";
-      # Comma-separated; `Http.ts` reads it through `Config.Array`. There is no default there -- an
-      # unset value stops the server rather than silently allowing every origin. Both schemes,
-      # matching `supabase/config.toml`'s `site_url` / `additional_redirect_urls` pair.
-      APP_ORIGINS = "http://127.0.0.1:5173,https://127.0.0.1:5173,http://localhost:5173";
-      # Local Supabase's Postgres. `Pg.ts` has no defaults either, so the launcher states them; the
-      # server only reads them once a feature provides `Sql.PgLive`.
-      DB_HOST = "127.0.0.1";
-      DB_PORT = "54322";
-      DB_USER = "postgres";
-      DB_PASSWD = "postgres";
-      DB_DATABASE = "postgres";
+      local = import ../../nix/local.nix;
     in
     {
       packages.server = buildPnpmPackage {
@@ -107,16 +96,7 @@
             name = "server-dev";
             text = ''
               cd "$(git rev-parse --show-toplevel)/apps/server"
-              export PUBLIC_SUPABASE_URL="${PUBLIC_SUPABASE_URL}"
-              export DB_HOST="${DB_HOST}"
-              export DB_PORT="${DB_PORT}"
-              export DB_USER="${DB_USER}"
-              export DB_PASSWD="${DB_PASSWD}"
-              export DB_DATABASE="${DB_DATABASE}"
-              export APP_ORIGINS="${APP_ORIGINS}"
-              # `Http.ts` carries no Config defaults -- every launcher names its port and log level.
-              export API_PORT="''${API_PORT:-3001}"
-              export LOG_LEVEL="''${LOG_LEVEL:-Info}"
+              ${local.serverEnv}
               pnpm install
               pnpm tsx watch src/main.ts
             '';
@@ -146,10 +126,10 @@
               # Supabase's Postgres, the same values `server-dev` exports one by one.
               wrangler dev ./build/worker.js \
                 --config wrangler.json \
-                --var "PUBLIC_SUPABASE_URL:${PUBLIC_SUPABASE_URL}" \
-                --var "APP_ORIGINS:${APP_ORIGINS}" \
+                --var "PUBLIC_SUPABASE_URL:${local.PUBLIC_SUPABASE_URL}" \
+                --var "APP_ORIGINS:${local.APP_ORIGINS}" \
                 --var "LOG_LEVEL:''${LOG_LEVEL:-Info}" \
-                --var "DB_URL:postgres://${DB_USER}:${DB_PASSWD}@${DB_HOST}:${DB_PORT}/${DB_DATABASE}"
+                --var "DB_URL:postgres://${local.DB_USER}:${local.DB_PASSWD}@${local.DB_HOST}:${local.DB_PORT}/${local.DB_DATABASE}"
             '';
           };
         };

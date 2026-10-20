@@ -8,17 +8,18 @@ _: {
     }:
     let
       fs = pkgs.lib.fileset;
+      local = import ../../nix/local.nix;
       # `Pg.ts` deliberately has no `Config.withDefault`, so an unset variable stops the process
       # rather than silently connecting as `postgres`/`postgres`. That means the local values have to
-      # be stated somewhere, and this is the somewhere -- matching `server.nix`.
+      # be stated somewhere, and `nix/local.nix` is the somewhere.
       #
       # Local Supabase only. Production runs these against a real database with real credentials.
       dbEnv = ''
-        export DB_HOST="''${DB_HOST:-127.0.0.1}"
-        export DB_PORT="''${DB_PORT:-54322}"
-        export DB_USER="''${DB_USER:-postgres}"
-        export DB_PASSWD="''${DB_PASSWD:-postgres}"
-        export DB_DATABASE="''${DB_DATABASE:-postgres}"
+        export DB_HOST="''${DB_HOST:-${local.DB_HOST}}"
+        export DB_PORT="''${DB_PORT:-${local.DB_PORT}}"
+        export DB_USER="''${DB_USER:-${local.DB_USER}}"
+        export DB_PASSWD="''${DB_PASSWD:-${local.DB_PASSWD}}"
+        export DB_DATABASE="''${DB_DATABASE:-${local.DB_DATABASE}}"
       '';
     in
     {
