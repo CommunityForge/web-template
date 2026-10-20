@@ -90,8 +90,9 @@ these are their React and Atom consequences:
 Catalogs gate the Effect line, `typescript`, `vitest`, `@types/node`. React, Vite and Tailwind are
 pinned with ordinary ranges here — intentional.
 
-`nix run .#frontend-dev` runs the Vite dev server with hot reload and prints the local URL. It is the primary
-development loop.
+`nix run .#dev` (root `AGENTS.md`, "The local app") is the primary development loop: the screen beside the API and
+Supabase. `vite.config.ts` names no port of its own; it serves on `APP_PORT` with `strictPort` and proxies `/api` to
+`API_PORT`, and stops when either is unset. `nix run .#frontend-dev` is the screen alone, on the same ports.
 
 `nix build .#frontend` emits the static bundle to `$out`; its `checkPhase` runs `check`,
 `test --run` and `oxlint --type-aware`.

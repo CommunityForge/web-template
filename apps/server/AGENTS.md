@@ -190,7 +190,7 @@ do not move. Whether an anonymous principal may use a route is decided against t
 ## Configuration
 
 Every value comes from the ambient `ConfigProvider`, with no default anywhere in `src`. The launcher names each one:
-`server-dev` and `server-worker-dev` in `server.nix` for development, the GitHub workflows for the deployed Worker, the
+`dev`, `server-dev` and `server-worker-dev` for development (their values in `nix/local.nix`), the GitHub workflows for the deployed Worker, the
 NixOS module for a Node host. In the Worker the ambient provider is `configProvider(env)`, the Hyperdrive binding for
 `DB_URL` when bound and `ConfigProvider.fromUnknown` over the bindings behind it; no layer takes `env` as an argument.
 
@@ -258,9 +258,10 @@ nothing special-cases it.
 
 ## Commands
 
-`nix run .#server-dev` exports every variable above against local Supabase and runs the Node server in watch mode. The
-startup log line names the bound address with `/api/docs` and `/api/openapi.json`, which is how a fresh checkout
-confirms the Swagger layer is mounted. It is the primary development loop.
+`nix run .#dev` (root `AGENTS.md`, "The local app") is the primary development loop: this server beside the screen and
+Supabase, reached through the screen's `/api` proxy. `nix run .#server-dev` is the server alone: it exports every
+variable above against local Supabase and runs the Node server in watch mode. The startup log line names the bound
+address with `/api/docs` and `/api/openapi.json`, which is how a fresh checkout confirms the Swagger layer is mounted.
 
 `nix run .#server-worker-dev` is the Worker shape: it builds `server-worker` for the assets, rebuilds `worker.js` on
 every source change, and runs `wrangler dev` on it with `DB_URL` pointed at local Supabase (no Hyperdrive locally).

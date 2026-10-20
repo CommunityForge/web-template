@@ -55,6 +55,7 @@
         ./packages/supabase/supabase.nix
         ./apps/frontend/frontend.nix
         ./apps/server/server.nix
+        ./nix/dev.nix
       ];
       perSystem =
         {
