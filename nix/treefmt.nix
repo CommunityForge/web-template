@@ -23,6 +23,7 @@
     ".repos/**"
     "pnpm-lock.yaml"
     "flake.lock"
+    "supabase/supabase.lock"
     "*.tsbuildinfo"
     # Vendored third-party agent skill bundles -- not ours to reformat.
     ".agents/**"

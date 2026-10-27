@@ -10,16 +10,15 @@ _: {
       fs = pkgs.lib.fileset;
       local = import ../../nix/local.nix;
       # `Pg.ts` deliberately has no `Config.withDefault`, so an unset variable stops the process
-      # rather than silently connecting as `postgres`/`postgres`. That means the local values have to
-      # be stated somewhere, and `nix/local.nix` is the somewhere.
+      # rather than silently connecting as `postgres`/`postgres`. A `DB_URL` in the environment is
+      # used as given; otherwise the values come from this checkout's local Supabase stack, which
+      # has to be running (`nix run .#dev` starts it).
       #
       # Local Supabase only. Production runs these against a real database with real credentials.
       dbEnv = ''
-        export DB_HOST="''${DB_HOST:-${local.DB_HOST}}"
-        export DB_PORT="''${DB_PORT:-${local.DB_PORT}}"
-        export DB_USER="''${DB_USER:-${local.DB_USER}}"
-        export DB_PASSWD="''${DB_PASSWD:-${local.DB_PASSWD}}"
-        export DB_DATABASE="''${DB_DATABASE:-${local.DB_DATABASE}}"
+        if [ -z "''${DB_URL:-}" ]; then
+          ${local.supabaseEnv}
+        fi
       '';
     in
     {

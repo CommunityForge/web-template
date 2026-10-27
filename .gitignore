@@ -28,6 +28,9 @@ result
 result-*
 .devshell
 
+# the local app: the pids `nix run .#dev` recorded for this checkout's last run
+.dev-app.pids
+
 # agents
 ## `.claude/` doubles as CLAUDE_CONFIG_DIR (see AGENTS.md "Agent configuration"), so it mixes
 ## tracked project config with runtime state and credentials. Ignore everything, then

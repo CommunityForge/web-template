@@ -16,7 +16,7 @@
 set -uo pipefail
 local_app=""
 if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
-  local_app='LOCAL APP: open the app at the start of every chat with preview_start {name: \"app\"}, alongside the first tool call. It runs the whole app (database, API, screen) on its fixed ports and takes them back from anything left over, so calling it again is always safe; it is the one way to run the app. After a change to the database schema, dependencies or Nix files, restart it: preview_stop, then preview_start. Tell the person their app is open in the panel beside the chat. AGENTS.md \"The local app\" covers the rest.\n\n'
+  local_app='LOCAL APP: open the app at the start of every chat with preview_start {name: \"app\"}, alongside the first tool call. It runs the whole app of this checkout (database, API, screen) on ports of its own, beside any other project, and stops only the previous run of this checkout, so calling it again is always safe; it is the one way to run the app. After a change to the database schema, dependencies or Nix files, restart it: preview_stop, then preview_start. Tell the person their app is open in the panel beside the chat. AGENTS.md \"The local app\" covers the rest.\n\n'
 fi
 cat <<JSON
 {

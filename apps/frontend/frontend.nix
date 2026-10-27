@@ -53,9 +53,9 @@ _: {
           text = ''
             cd "$(git rev-parse --show-toplevel)/apps/frontend"
             # `vite.config.ts` has no port of its own: it serves on APP_PORT and proxies `/api` to
-            # API_PORT, where only `nix run .#dev` or `.#server-dev` has an API listening.
-            export APP_PORT="${local.APP_PORT}"
-            export API_PORT="${local.API_PORT}"
+            # API_PORT, this checkout's pair, where only `nix run .#dev` or `.#server-dev` has an
+            # API listening.
+            ${local.appPorts}
             pnpm install
             pnpm run dev
           '';

@@ -19,7 +19,8 @@ root; every workspace unit declares its own dependency as well.
 
 ## Platform skills
 
-Supabase is the platform: `supabase/config.toml` enables Postgres, Auth, Storage and Realtime. The
+Supabase is the platform: `supabase/config.toml` enables Postgres, Auth, Storage and Realtime, and
+runs them locally on the stack engine (`[experimental] stack`; see "The local app"). The
 repo reaches it through two units only: `packages/supabase` (the supabase-js client, the `Auth`
 adapter, and the claim decoding `apps/server` uses) and `packages/db` (Postgres, DDL, exposure
 audit, repositories). Storage and Realtime have no binding yet; a change that needs one adds a
@@ -52,7 +53,7 @@ there is no `packageManager` field and no `.nvmrc`.
 | `bin/align-probe.sh`       | Read-only `key=value` facts about where the project stands; what `/Align` reasons from       |
 | `bin/test-align-probe.sh`  | The probe's fixture suite: throwaway repos and a fake `gh`, run by hand like `test-hooks.sh` |
 | `bin/test-session-sync.sh` | The new-chat sync hook's fixture suite: throwaway repos with a local "GitHub", run by hand   |
-| `nix run .#dev`            | The whole local app on fixed ports; see "The local app"                                      |
+| `nix run .#dev`            | This checkout's whole local app on its own ports; see "The local app"                        |
 | `nix build .#<unit>`       | Reproducible build of one unit; its `checkPhase` re-runs check/test/lint                     |
 
 ### Formatting
@@ -83,34 +84,38 @@ and deploys; a failed migration or audit stops the deploy.
 
 ## The local app
 
-`nix run .#dev`, the `app` entry in `.claude/launch.json`, runs the whole app on this project's
-fixed ports: the screen on 5173 with `/api` proxied to the API on 3001, and local Supabase on its
-`supabase/config.toml` ports. `nix/local.nix` holds the ports and every value the launchers export;
-`config.toml`'s `site_url` restates `APP_PORT`. A desktop chat starts it through `preview_start`,
-the one route outside the Bash sandbox, which can bind no port, reach no Docker and stop no process.
+`nix run .#dev`, the `app` entry in `.claude/launch.json`, runs THIS CHECKOUT's whole app: the
+screen, the API behind its `/api` proxy, and this checkout's own local Supabase. Several checkouts
+(other projects, worktrees) run side by side, each on its own ports. A desktop chat starts it
+through `preview_start`, the one route outside the Bash sandbox, which can bind no port and stop no
+process.
 
-Start order: Docker check, `pnpm install`, port reclaim, screen, Supabase, migrations, API. The
-screen comes first so `preview_start`'s wait on 5173 is answered while Supabase may still be pulling
-images. When Docker is not running the launcher stops with that message: NEEDS YOU, since only the
-person can start Docker Desktop.
-
-- **Reclaim vs reuse.** Whatever listens on 5173 or 3001 is stopped on start, whether a server left
-  by an earlier chat or another repo's. This project's Supabase stack is reused when it is up;
-  another project's is stopped with `supabase stop --project-id`, its data kept. Calling it again is
-  therefore always safe, and one repo at a time is the expectation.
-- **The panel checks 5173 before the launcher runs.** `.claude/hooks/app-ports.sh` frees it at the
-  start of every new chat, and `autoPort: false` makes a port taken later a refused start instead
-  of a silent move to 5174. A refused start mid-chat means something grabbed 5173 after the chat
-  began: a new chat takes it back.
+- **Ports.** The screen takes the port the panel assigns (`autoPort`: 5173 when free, the next free
+  one otherwise, handed over in `PORT`); outside the panel, and for the API always, ports are derived
+  from the checkout path, so every launcher agrees. `nix/local.nix` holds that rule and every value
+  the launchers export. Sign-in redirects allow any loopback port (`config.toml`'s
+  `additional_redirect_urls`).
+- **Database.** Supabase's stack engine on the native runtime: every service a host process, no
+  Docker. One stack per checkout and git branch, its ports allocated and remembered by the CLI, its
+  data in `~/.supabase/stacks/`; services start on first use and stop after a minute idle. The
+  launchers read its addresses from `supabase status --env`. `supabase stop` stops it, and
+  `supabase stack destroy` deletes it and its data. The first start downloads about 360 MB.
+- **Supported hosts.** macOS 14+ on Apple silicon; Linux with glibc 2.35+ (WSL Ubuntu 22.04+).
+  Elsewhere the launcher stops and says so: NEEDS YOU, since only the person can change machine.
+- **Restart.** Start order: platform check, stop this checkout's previous run, `pnpm install`,
+  screen, Supabase, migrations, API. A restart stops only processes of this checkout (pids in
+  `.dev-app.pids`, and listeners on its own ports running from inside it), never another project's,
+  so calling it again is always safe. A port held by something else is a refused start naming it.
 - **Live vs restart.** A screen edit shows at once. An API edit restarts the API by itself, and the
   page shows it after a refresh. A change to the database schema, dependencies or any `.nix` file
   needs the app restarted: `preview_stop`, then `preview_start {name: "app"}`.
 - **Logs** carry `[dev]`, `[web]`, `[api]` and `[db]` prefixes; `preview_logs` with `search` picks
-  one.
-- **Supabase outlives the app** ON PURPOSE: it is the slow piece to bring back. `supabase stop` in
-  the dev shell stops it.
+  one. `[dev]` names the screen and API ports.
+- **Supabase outlives the app** ON PURPOSE: it is the slow piece to bring back, and its idle
+  services stop themselves.
 
-`nix run .#frontend-dev` and `nix run .#server-dev` remain the single-unit loops.
+`nix run .#frontend-dev` and `nix run .#server-dev` remain the single-unit loops; the API ones need
+this checkout's Supabase running and say so when it is not.
 
 ## Layout
 

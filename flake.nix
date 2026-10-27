@@ -71,6 +71,7 @@
           projectName = "replaceme";
           pnpm = pkgs.pnpm_10;
           nodejs = pkgs.nodejs-slim_26;
+          supabase-cli = import ./nix/supabase-cli.nix { inherit pkgs; };
           agentsPkgs = llm-agents.packages.${system};
           buildPnpmPackage = import ./nix/buildPnpmPackage.nix { inherit pkgs nodejs pnpm; };
           treefmt = treefmt-nix.lib.evalModule pkgs (import ./nix/treefmt.nix { inherit pkgs; });
@@ -104,7 +105,7 @@
             # configures git's credential helper) and the wizard library's
             # set_secret/set_var helpers.
             pkgs.gh
-            pkgs.supabase-cli
+            supabase-cli
             pkgs.oxfmt
             pkgs.oxlint
             pkgs.tsgolint
@@ -120,6 +121,7 @@
             inherit
               nodejs
               pnpm
+              supabase-cli
               buildPnpmPackage
               ;
           };
@@ -189,6 +191,8 @@
               };
             };
           };
+          # The one Supabase CLI: the dev shell, the launchers and CI's preview workflow all run this.
+          packages.supabase-cli = supabase-cli;
           packages.toolchain = pkgs.buildEnv {
             name = "${projectName}-toolchain";
             paths = toolchainPackages;

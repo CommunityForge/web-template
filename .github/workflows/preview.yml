@@ -47,14 +47,15 @@ jobs:
       # the one step that needs nothing from it. The migrator is realized here too, beside the
       # Worker, so the migrate step below finds it in the store. `server-worker` stays FIRST:
       # `nix build` links installables in order, and `result` is the directory wrangler serves.
-      # The second command realizes the two CLIs the later steps run, from the flake's own locked
-      # nixpkgs (`--inputs-from`), so they come out of the restored snapshot rather than a fresh
-      # tarball, and the preview uploads with the same wrangler the lock file names.
+      # The second command realizes the two CLIs the later steps run: wrangler from the flake's own
+      # locked nixpkgs (`--inputs-from`), so it comes out of the restored snapshot rather than a
+      # fresh tarball and the preview uploads with the same wrangler the lock file names, and the
+      # flake's own Supabase CLI, the one the dev shell runs.
       - name: Build
         working-directory: apps/server
         run: |
           nix build "$GITHUB_WORKSPACE#server-worker" "$GITHUB_WORKSPACE#db-migrator"
-          nix build --no-link --inputs-from "$GITHUB_WORKSPACE" nixpkgs#wrangler nixpkgs#supabase-cli
+          nix build --no-link --inputs-from "$GITHUB_WORKSPACE" nixpkgs#wrangler "$GITHUB_WORKSPACE#supabase-cli"
       - name: Wait for the pull request's Supabase branch
         env:
           GH_TOKEN: ${{ github.token }}
@@ -91,7 +92,7 @@ jobs:
           SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
           BRANCH: ${{ github.event.pull_request.head.ref }}
         run: |
-          nix run --inputs-from "$GITHUB_WORKSPACE" nixpkgs#supabase-cli -- branches get "$BRANCH" --project-ref "$SUPABASE_PROJECT_REF" --output env > "$RUNNER_TEMP/branch.env"
+          nix run "$GITHUB_WORKSPACE#supabase-cli" -- branches get "$BRANCH" --project-ref "$SUPABASE_PROJECT_REF" --output env > "$RUNNER_TEMP/branch.env"
           # Every value in that file is a credential or names one. Mask them all before anything
           # below can echo one.
           while IFS='=' read -r key raw; do

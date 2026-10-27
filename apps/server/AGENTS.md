@@ -260,7 +260,7 @@ nothing special-cases it.
 
 `nix run .#dev` (root `AGENTS.md`, "The local app") is the primary development loop: this server beside the screen and
 Supabase, reached through the screen's `/api` proxy. `nix run .#server-dev` is the server alone: it exports every
-variable above against local Supabase and runs the Node server in watch mode. The startup log line names the bound
+variable above against this checkout's local Supabase and runs the Node server in watch mode. The startup log line names the bound
 address with `/api/docs` and `/api/openapi.json`, which is how a fresh checkout confirms the Swagger layer is mounted.
 
 `nix run .#server-worker-dev` is the Worker shape: it builds `server-worker` for the assets, rebuilds `worker.js` on

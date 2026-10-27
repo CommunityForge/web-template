@@ -92,7 +92,7 @@ pinned with ordinary ranges here — intentional.
 
 `nix run .#dev` (root `AGENTS.md`, "The local app") is the primary development loop: the screen beside the API and
 Supabase. `vite.config.ts` names no port of its own; it serves on `APP_PORT` with `strictPort` and proxies `/api` to
-`API_PORT`, and stops when either is unset. `nix run .#frontend-dev` is the screen alone, on the same ports.
+`API_PORT`, and stops when either is unset. `nix run .#frontend-dev` is the screen alone, on this checkout's ports.
 
 `nix build .#frontend` emits the static bundle to `$out`; its `checkPhase` runs `check`,
 `test --run` and `oxlint --type-aware`.

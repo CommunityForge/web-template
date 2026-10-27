@@ -24,7 +24,8 @@ needed for the drift gate's oracle only; nothing at runtime uses it.
 | `nix run .#db-sync-supabase-local` | Regenerate `src/internal/supabase-database.ts` from local DB |
 | `nix run .#db-migrator`            | Migrate, then audit, with no workspace: `DB_URL` or `DB_*`   |
 
-The apps export local-Supabase `DB_*` values; set them in the environment to point elsewhere. A full local rebuild is
+The apps read this checkout's local Supabase stack (`nix run .#dev` starts it) for the `DB_*` values and `DB_URL`;
+set `DB_URL` in the environment to point elsewhere. A full local rebuild is
 `db-reset`, in that order: a user-owned table references `auth.users`, which only exists after Supabase's reset, and a
 reset restores Supabase's stock default privileges, so the lockdown is re-applied and re-checked rather than assumed.
 

@@ -96,6 +96,7 @@
             name = "server-dev";
             text = ''
               cd "$(git rev-parse --show-toplevel)/apps/server"
+              ${local.appPorts}
               ${local.serverEnv}
               pnpm install
               pnpm tsx watch src/main.ts
@@ -114,6 +115,8 @@
             text = ''
               root="$(git rev-parse --show-toplevel)"
               cd "$root/apps/server"
+              ${local.appPorts}
+              ${local.serverEnv}
               pnpm install
               # `./result/assets` is what wrangler.json serves. The bundle beside it is the last
               # build's; the watcher below writes a fresh one to ./build/worker.js, which is the
@@ -122,14 +125,14 @@
               pnpm run build:worker --watch &
               watcher=$!
               trap 'kill "$watcher"' EXIT
-              # No Hyperdrive locally, so `DB_URL` is the whole database configuration: local
-              # Supabase's Postgres, the same values `server-dev` exports one by one.
+              # No Hyperdrive locally, so `DB_URL` is the whole database configuration: this
+              # checkout's local Supabase, the same database `server-dev` uses.
               wrangler dev ./build/worker.js \
                 --config wrangler.json \
-                --var "PUBLIC_SUPABASE_URL:${local.PUBLIC_SUPABASE_URL}" \
-                --var "APP_ORIGINS:${local.APP_ORIGINS}" \
-                --var "LOG_LEVEL:''${LOG_LEVEL:-Info}" \
-                --var "DB_URL:postgres://${local.DB_USER}:${local.DB_PASSWD}@${local.DB_HOST}:${local.DB_PORT}/${local.DB_DATABASE}"
+                --var "PUBLIC_SUPABASE_URL:$PUBLIC_SUPABASE_URL" \
+                --var "APP_ORIGINS:$APP_ORIGINS" \
+                --var "LOG_LEVEL:$LOG_LEVEL" \
+                --var "DB_URL:$DB_URL"
             '';
           };
         };
