@@ -73,31 +73,20 @@ artifacts:
       before asking anything.
       </phase_2_scan_and_triage>
 
-      <phase_3_challenge_before_refining>
-      Before refining the request, question it. All four checks are
-      mandatory:
+      <phase_3_synthesis_check>
+      Before showing the user anything, complete the background analysis:
 
       1. SCOPE. If the request spans multiple independent subsystems, stop
-         and propose splitting it into separate changes. Do not spend
-         questions refining a change that needs decomposition.
+         and propose splitting it into separate changes. Do not synthesize
+         a change that needs decomposition.
 
-      2. PREMISE. State, in one plain sentence, the strongest reason this
-         change might be unnecessary, wrongly sized, or already served by an
-         existing capability — then ask the user to confirm the goal behind
-         the request. It is the first question you send. If after
-         honest effort no such reason exists, record "premise check: no
-         objection found" in discovery.md and move on. Do not manufacture an
-         objection, and do not skip the check.
-
-      3. LIFECYCLE WALK. For the requested behavior, walk its whole life:
+      2. LIFECYCLE WALK. For the requested behavior, walk its whole life:
          the first time someone opens it with nothing in it; normal use;
          heavy use (hundreds of items); mistakes and changes of mind;
          failure; and removal or leaving. Any stage the request is silent on
-         is a gap — triage it in Phase 2's buckets like any other. A request
-         is almost never complete as written; the stages it skips are where
-         production surprises live.
+         is a gap — triage it in Phase 2's buckets like any other.
 
-      4. OWNERSHIP WALK. List every kind of thing this change stores, shows,
+      3. OWNERSHIP WALK. List every kind of thing this change stores, shows,
          or sends: a note, a photo, a reply, an address, a total computed
          from other people's records. For each, settle five answers:
            owner    - whose it is: the person who made it, a group, or the
@@ -128,17 +117,47 @@ artifacts:
          nothing and its removal costs nobody else anything. Any wider
          answer, including one the request implies by naming sharing, a
          team, a profile, or other people, is a one-way door.
-      </phase_3_challenge_before_refining>
+
+      4. MOTIVATION CHECK AND SYNTHESIS. The first thing the user sees is a
+         synthesis, not a challenge.
+
+         Evaluate whether the initial request includes sufficient motivation
+         for the scope of the change. "Sufficient" is proportional: a small
+         visual change clears the bar with almost no context; a change with
+         broader implications needs the "why" before synthesis.
+
+         — If motivation is sufficient: synthesize in 2–3 plain-language
+           sentences stating what the participant is trying to accomplish
+           and why, then ask a direct "Is that right?" Nothing else comes
+           before this synthesis.
+
+         — If motivation is not sufficient: ask one focused question about
+           the purpose of the change (not its technical details), then
+           synthesize once that question is answered.
+
+         — If there is a genuine reason the change might be unnecessary,
+           wrongly sized, or already served by an existing capability:
+           embed it as one sentence within the synthesis ("One thing worth
+           noting: [observation]. Does that change what you want to do
+           here?") rather than opening with a challenge. If no such reason
+           exists after honest consideration, omit it. Do not manufacture
+           a concern. Record "premise check: no concern found" in
+           discovery.md when there is nothing to note.
+
+         — If the participant corrects the synthesis, acknowledge the
+           correction and continue from the updated understanding. If they
+           confirm it, move to Phase 4.
+      </phase_3_synthesis_check>
 
       <phase_4_ask>
       Sort every PRODUCT gap with two yes/no calls:
-        INSIDE — does it belong to the feature as the request, the premise
-          answer, and the scope check bound it? Leaving a thing out is
-          usually reversible, so a gap outside the feature is never asked:
-          it becomes an out-of-scope line the user sees in Phase 5. A gap
-          stays INSIDE when leaving it out makes the feature unsafe or a
-          dead end, such as stored personal details with no way to remove
-          them.
+        INSIDE — does it belong to the feature as the request, the
+          synthesis answer, and the scope check bound it? Leaving a thing
+          out is usually reversible, so a gap outside the feature is never
+          asked: it becomes an out-of-scope line the user sees in Phase 5.
+          A gap stays INSIDE when leaving it out makes the feature unsafe
+          or a dead end, such as stored personal details with no way to
+          remove them.
         ONE-WAY DOOR — would a wrong guess be costly to reverse once people
           use the feature? Data exposed, deleted, or sent outside the
           product; money; the shape of what people save (one or many, what
@@ -149,14 +168,20 @@ artifacts:
       Ask every INSIDE one-way door, and only those. Each INSIDE two-way
       door is decided by you and goes to Phase 5 as ASSUMED. The user
       widens the feature, never you: when an answer brings a new gap
-      inside, sort it with the same two calls. Asking is done when every
-      INSIDE one-way door holds the user's answer. Ask first the doors whose answers others depend on, so a later
-      question builds on an earlier answer rather than guessing it.
+      inside, sort it with the same two calls. Ask first the doors whose
+      answers others depend on, so a later question builds on an earlier
+      answer rather than guessing it.
 
-      If the user says "done", "good", or "no more" before then, decide
-      each unasked one-way door at its safe side — the answer that exposes
-      least and is easiest to reverse — and carry it to Phase 5 as ASSUMED,
-      at the top of the list, saying it was never asked.
+      CAP AT 1–3 QUESTIONS. Ask at most three questions before offering the
+      TWO-WAY CHOICE (see below). If more than three INSIDE one-way doors
+      remain after the choice and the participant chooses to continue, ask
+      up to three more, then offer the choice again.
+
+      If the user says "done", "good", or "no more" before all doors are
+      answered, decide each unasked one-way door at its safe side — the
+      answer that exposes least and is easiest to reverse — and carry it to
+      Phase 5 as ASSUMED, at the top of the chains, saying it was never
+      asked.
 
       One question per message, never batched: each question is written
       knowing every earlier answer. If an interactive question tool is
@@ -164,9 +189,16 @@ artifacts:
       label 5 words or fewer, always allow an open-ended answer. Never show
       the user the coverage scan, the triage, or the question queue.
 
-      HOW TO PHRASE. Every question and every option describes something a
-      person using the product would notice. The scan category is your
-      reasoning, not your vocabulary. Translate before you speak:
+      NEVER ASK ABOUT IMPLEMENTATION. Questions about technical choices —
+      what database, what API shape, what library, what mechanism —
+      belong in design.md, not in the discovery conversation. If a gap is
+      only about how something is built, it is always a DESIGN gap: decide
+      it yourself in design.md.
+
+      HOW TO PHRASE. Every question and every option names something a
+      person using the product would notice — a behavior, a consequence,
+      something they can see or do. The scan category is your reasoning,
+      not your vocabulary. Translate before you speak:
 
         persistence      -> what is still there tomorrow, or on their phone
         domain model     -> what things someone names and sees; what they
@@ -216,33 +248,77 @@ artifacts:
         Passes: "Still there next week on any device - needs sign-in" vs
                 "Gone if this browser's data is cleared - no sign-in
                  needed"
+
+      TWO-WAY CHOICE. After your questions — and only when at least one
+      question was asked — close the question phase with exactly two paths:
+      proceed with building from the current understanding, or answer a
+      couple more questions to refine further. No third path. Present them
+      in the same parallel shape as any other options, with no path marked
+      as recommended.
+
+        Fails:  "Want to continue, explore alternatives, or revisit
+                 the scope?"
+        Passes: "Ready to build from here, or would a couple more questions
+                 help sharpen this first?"
+
+      If the participant chooses to continue, move to Phase 5. If they
+      choose more questions, ask up to three more (applying the same
+      Colleague Test and neutral-options rules), then offer the choice
+      again. If no questions were asked — the synthesis was confirmed and
+      there are no genuine INSIDE one-way door ambiguities — skip the
+      two-way choice and move directly to Phase 5.
       </phase_4_ask>
 
       <phase_5_confirm_assumptions>
       Every PRODUCT gap you did not ask about still gets decided — by you.
-      Before writing discovery.md, send the user the full list of those
-      decisions, each as one plain sentence they could veto, each marked
-      ASSUMED, phrased with the same translation table as the questions.
-      Follow it with every out-of-scope line from Phase 4, each one plain
-      sentence naming what this change leaves out. Ask them to confirm or
-      correct the list, and wait; an out-of-scope line they pull back in is
-      sorted again as an INSIDE gap. One short read for
-      the user is cheaper than one rebuild for everyone.
+      Before writing discovery.md, show the participant those decisions,
+      grouped by the direction or motivation they expressed, so they can
+      push back on any group without scanning an undifferentiated list. One
+      short read for the user is cheaper than one rebuild for everyone.
 
-      THE LIST IS CHAT TEXT, NEVER TOOL INPUT. Write the whole list in the
-      message body. An interactive question tool may follow it carrying only
-      the short confirm question and its options — never the list itself: a
-      question dialog is transient, and once it is dismissed or answered the
-      list is gone from the conversation. Any message that asks about the
-      assumptions carries the full list again, including a re-ask after a
-      dismissed question or an unclear reply. Never refer to "the list" or
-      "these assumptions" without the list in the same message.
+      REASONING CHAINS, NOT A FLAT LIST. Present only non-obvious
+      assumptions. Group them by what the participant said or indicated,
+      opening each group with their words:
+
+        "You said [X / you indicated X], so I'm:
+         — [decision that follows from it]
+         — [another decision]"
+
+      Omit obvious defaults (things neither of you discussed stay the
+      same) and confirmations of what was explicitly said — a question the
+      participant answered is not an assumption. Each bullet is a plain
+      sentence a person using the product would recognize; use the same
+      translation table as Phase 4.
+
+      EXAMPLE (for a change that adds a shared inbox):
+
+        You said the inbox belongs to the whole team, so I'm:
+        — making every team member able to read all messages in it
+        — letting any team member mark a message as handled
+
+        You said you want to keep setup simple, so I'm:
+        — starting with one inbox per team rather than one per project
+
+      Follow the chains with every out-of-scope line from Phase 4, each
+      one plain sentence naming what this change leaves out. Ask the
+      participant to confirm or push back, and wait; an out-of-scope line
+      they want pulled in is sorted again as an INSIDE gap.
+
+      THE CHAINS ARE CHAT TEXT, NEVER TOOL INPUT. Write them in the
+      message body. An interactive question tool may follow carrying only
+      the confirm question and its options — never the chains themselves:
+      a question dialog is transient, and once dismissed or answered the
+      chains are gone from the conversation. Any message that asks about
+      the assumptions carries the full chains again, including a re-ask
+      after a dismissed question or an unclear reply. Never refer to "the
+      assumptions" or "the list" without the chains in the same message.
 
         Fails:  question tool: "Here is everything I'm assuming: (1) ...
                 (2) ... Do these stand?"
-        Fails:  "The assumption list is waiting on you."
-        Passes: message body lists every ASSUMED line, then asks: "Do these
-                stand, or which would you change?"
+        Fails:  "The assumption chains are waiting on you."
+        Passes: message body shows the grouped chains, then asks: "Do
+                these match what you had in mind, or is there anything
+                you'd change?"
       </phase_5_confirm_assumptions>
 
       <phase_6_write>
@@ -262,14 +338,20 @@ artifacts:
       <final_check>
       Before each user-facing message and before writing discovery.md,
       verify:
-      1. The premise was challenged exactly once (Phase 3.2).
-      2. Questions were sent one per message. Every INSIDE one-way door was
-         asked, or the user stopped early and each unasked one is ASSUMED
-         at its safe side; no two-way door or outside gap was asked.
+      1. The synthesis appeared before any question. Any premise concern
+         was embedded as a sentence within the synthesis, not sent as a
+         separate challenge. If no premise concern existed, discovery.md
+         records "premise check: no concern found."
+      2. Questions were sent one per message, framed as behavioral choices
+         (consequences, not technical options). Every INSIDE one-way door
+         was asked, or the user stopped early and each unasked one is
+         ASSUMED at its safe side; no two-way door or outside gap was
+         asked; no implementation-detail question was sent.
       3. No option anywhere is marked, ordered, or worded as recommended.
-      4. The assumption list was shown and confirmed before the file was
-         written — shown as chat text, in full, in every message that asked
-         about it.
+      4. After questions, the two-way choice was offered — unless no
+         questions were asked (in which case it was skipped). The
+         assumptions were shown as reasoning chains, grouped by motivation,
+         in chat text in full, in every message that asked about them.
       5. Every thing the change stores, shows, or sends has an ownership
          row with all five answers sourced.
       6. Mechanical vocabulary check — these strings appear nowhere in any
